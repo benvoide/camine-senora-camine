@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rutas random — Bahía Blanca</title>
+  <style>
+    :root {
+      --bg: #f3efe6;
+      --ink: #1d1a16;
+      --muted: #5e574c;
+      --line: #d8d0c3;
+      --card: #fffcf6;
+      --accent: #215c3a;
+      --accent-ink: #fff;
+      --err: #8a2b1e;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 16px 20px 14px;
+      background: var(--card);
+      border-bottom: 1px solid var(--line);
+    }
+    h1 {
+      margin: 0 0 4px;
+      font-size: 1.25rem;
+      font-weight: 650;
+    }
+    .lead {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.4;
+    }
+    form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 12px;
+      align-items: end;
+    }
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    input[type="number"] {
+      width: 7.2rem;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      font: inherit;
+      color: var(--ink);
+      background: #fff;
+    }
+    button {
+      background: var(--accent);
+      color: var(--accent-ink);
+      border: 0;
+      border-radius: 6px;
+      padding: 9px 16px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { filter: brightness(1.06); }
+    button:disabled { opacity: 0.6; cursor: default; filter: none; }
+    #status {
+      margin-top: 12px;
+      font-size: 0.95rem;
+      min-height: 1.35em;
+      line-height: 1.45;
+    }
+    #status.error { color: var(--err); }
+    #status a { color: var(--accent); font-weight: 600; }
+    #map { flex: 1; min-height: 280px; background: #ddd; }
+    .maplibregl-popup-content { font-family: inherit; font-size: 0.9rem; }
+    .pacman-marker, .fruit-marker {
+      width: 34px;
+      height: 34px;
+      pointer-events: auto;
+    }
+    .pacman-rot, .fruit-marker svg, .pacman-rot svg {
+      width: 34px;
+      height: 34px;
+      display: block;
+      overflow: visible;
+    }
+    .pacman-rot { transform-origin: 50% 50%; }
+    .fruit-marker svg { width: 32px; height: 32px; margin: 1px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Rutas random</h1>
+    <p class="lead">Vueltas a pie desde el Teatro Municipal (Alsina 425), sin pasar por el Paseo de las Esculturas.</p>
+    <form id="form">
+      <label>
+        Distancia (km)
+        <input type="number" id="km" value="7" min="1" max="30" step="0.5" required>
+      </label>
+      <button type="submit" id="btn">Sugerir ruta</button>
+    </form>
+    <div id="status">Elegí la distancia y tocá Sugerir ruta.</div>
+  </header>
+  <div id="map"></div>
+
+  <script>
+    const MAPLIBRE_CSS = [
+      "https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.1/dist/maplibre-gl.css",
+      "https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.css",
+      "https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.6.1/maplibre-gl.css"
+    ];
+    const MAPLIBRE_JS = [
+      "https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.1/dist/maplibre-gl.js",
+      "https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.js",
+      "https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.6.1/maplibre-gl.js"
+    ];
+
+    loadCss(MAPLIBRE_CSS);
+    loadScriptChain(MAPLIBRE_JS).then(initApp).catch(function () {
+      document.getElementById("status").className = "error";
+      document.getElementById("status").textContent = "No pude cargar la librería del mapa. Revisá la conexión.";
+    });
+
+    function loadCss(urls) {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      let i = 0;
+      link.href = urls[0];
+      link.onerror = function () {
+        i += 1;
+        if (i < urls.length) link.href = urls[i];
+      };
+      document.head.appendChild(link);
+    }
+
+    function loadScriptChain(urls) {
+      return new Promise(function (resolve, reject) {
+        let i = 0;
+        function next() {
+          if (i >= urls.length) {
+            reject(new Error("cdn"));
+            return;
+          }
+          const s = document.createElement("script");
+          s.src = urls[i++];
+          s.onload = function () {
+            if (window.maplibregl) resolve();
+            else next();
+          };
+          s.onerror = next;
+          document.head.appendChild(s);
+        }
+        next();
+      });
+    }
+
+    function initApp() {
+      const START = [-38.714775, -62.260133];
+      const PASEO_A = [-38.7059, -62.2605];
+      const PASEO_B = [-38.7077, -62.2574];
+      const BUFFER_M = 150;
+      const VALHALLA_URL = "https://valhalla1.openstreetmap.de/route";
+      const OSRM_URL = "https://routing.openstreetmap.de/routed-foot/route/v1/foot";
+      const OFM_STYLE = "https://tiles.openfreemap.org/styles/liberty";
+      const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
+      const EXCLUDE_POLY = exclusionPolygon(PASEO_A, PASEO_B, 180);
+
+      // CARTO's public basemaps now require an API key, so the raster
+      // fallback is OSM.de (same OSM data, works without a key from file://).
+      function rasterStyle(tiles, extraAttr) {
+        return {
+          version: 8,
+          sources: {
+            raster: {
+              type: "raster",
+              tiles: tiles,
+              tileSize: 256,
+              attribution: OSM_ATTR + (extraAttr || ""),
+              maxzoom: 19
+            }
+          },
+          layers: [{ id: "raster", type: "raster", source: "raster" }]
+        };
+      }
+      const FALLBACK_STYLE = rasterStyle([
+        "https://tile.openstreetmap.de/{z}/{x}/{y}.png"
+      ]);
+
+      let map, startMarker, fruitMarker, currentShape = null, fallbackUsed = false, mapStyleReady = false;
+
+      map = new maplibregl.Map({
+        container: "map",
+        style: OFM_STYLE,
+        center: [START[1], START[0]],
+        zoom: 14,
+        attributionControl: { compact: true, customAttribution: OSM_ATTR + ' © <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>' }
+      });
+      map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+
+      map.on("load", function () {
+        mapStyleReady = true;
+        map.resize();
+        placeMarker();
+        if (currentShape) drawRoute(currentShape);
+      });
+
+      map.on("error", function (e) {
+        if (fallbackUsed) return;
+        const err = (e && e.error) ? String(e.error.message || e.error) : "";
+        const src = e && (e.sourceId || (e.source && e.source.id));
+        if (src === "openmaptiles" || /style|failed to fetch|network|ajax|source/i.test(err)) {
+          useRasterFallback();
+        }
+      });
+
+      function useRasterFallback() {
+        if (fallbackUsed) return;
+        fallbackUsed = true;
+        mapStyleReady = false;
+        map.setStyle(FALLBACK_STYLE);
+      }
+
+      map.on("style.load", function () {
+        mapStyleReady = true;
+        placeMarker();
+        if (currentShape) drawRoute(currentShape);
+      });
+
+      // If the vector style never settles, fall back after a few seconds.
+      setTimeout(function () {
+        if (!mapStyleReady) useRasterFallback();
+      }, 8000);
+
+      function pacmanEl() {
+        const el = document.createElement("div");
+        el.className = "pacman-marker";
+        el.innerHTML = '<div class="pacman-rot"><svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16 16 L26.72 7 A14 14 0 1 0 26.72 25 Z" fill="#ffe000" stroke="#c9a800" stroke-width="1" stroke-linejoin="round"/><circle cx="16.5" cy="10" r="2.1" fill="#1d1a16"/></svg></div>';
+        return el;
+      }
+
+      function cherriesEl() {
+        const el = document.createElement("div");
+        el.className = "fruit-marker";
+        el.title = "Cerezas";
+        el.innerHTML = '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M13 17 C13 11 16 7 20 4" fill="none" stroke="#1f7a2c" stroke-width="1.8" stroke-linecap="round"/><path d="M20 17 C20.2 12 20.2 8 20 4" fill="none" stroke="#1f7a2c" stroke-width="1.8" stroke-linecap="round"/><ellipse cx="23.2" cy="6.2" rx="5.2" ry="2.3" fill="#3bb343" transform="rotate(-28 23.2 6.2)"/><circle cx="12.2" cy="22.2" r="7.1" fill="#c4161d"/><circle cx="12.2" cy="22.2" r="6.6" fill="#e31b23"/><circle cx="20.4" cy="21.2" r="7.1" fill="#b31319"/><circle cx="20.4" cy="21.2" r="6.6" fill="#de1a22"/><circle cx="9.6" cy="19.6" r="2.1" fill="#fff" opacity="0.7"/><circle cx="18" cy="18.6" r="1.9" fill="#fff" opacity="0.65"/></svg>';
+        return el;
+      }
+
+      function distM(a, b) {
+        const lat0 = ((a[0] + b[0]) / 2) * Math.PI / 180;
+        const dx = (b[1] - a[1]) * 111320 * Math.cos(lat0);
+        const dy = (b[0] - a[0]) * 110540;
+        return Math.hypot(dx, dy);
+      }
+
+      function pointAlongRoute(shape, fraction) {
+        if (!shape || shape.length === 0) return START;
+        if (shape.length === 1) return shape[0];
+        let total = 0;
+        const segs = [];
+        for (let i = 1; i < shape.length; i++) {
+          const d = distM(shape[i - 1], shape[i]);
+          segs.push({ d: d, a: shape[i - 1], b: shape[i] });
+          total += d;
+        }
+        if (total <= 0) return shape[Math.floor(shape.length / 2)];
+        let target = total * fraction;
+        for (let i = 0; i < segs.length; i++) {
+          const s = segs[i];
+          if (target <= s.d) {
+            const t = s.d ? target / s.d : 0;
+            return [s.a[0] + (s.b[0] - s.a[0]) * t, s.a[1] + (s.b[1] - s.a[1]) * t];
+          }
+          target -= s.d;
+        }
+        return shape[shape.length - 1];
+      }
+
+      function routeBearing(shape) {
+        if (!shape || shape.length < 2) return 0;
+        const from = shape[0];
+        let to = shape[1];
+        for (let i = 1; i < shape.length; i++) {
+          if (distM(from, shape[i]) >= 25) { to = shape[i]; break; }
+          to = shape[i];
+        }
+        const lat1 = from[0] * Math.PI / 180;
+        const lat2 = to[0] * Math.PI / 180;
+        const dLon = (to[1] - from[1]) * Math.PI / 180;
+        const y = Math.sin(dLon) * Math.cos(lat2);
+        const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+        return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+      }
+
+      function rotatePacman(shape) {
+        if (!startMarker) return;
+        const rot = startMarker.getElement().querySelector(".pacman-rot");
+        if (!rot) return;
+        // SVG faces east; geographic bearing 0 is north.
+        rot.style.transform = "rotate(" + (routeBearing(shape) - 90) + "deg)";
+      }
+
+      function placeFruit(shape) {
+        if (fruitMarker) {
+          fruitMarker.remove();
+          fruitMarker = null;
+        }
+        if (!shape || shape.length < 2) return;
+        const frac = 0.25 + Math.random() * 0.5;
+        const pt = pointAlongRoute(shape, frac);
+        fruitMarker = new maplibregl.Marker({ element: cherriesEl(), anchor: "center" })
+          .setLngLat([pt[1], pt[0]])
+          .addTo(map);
+      }
+
+      function placeMarker() {
+        if (startMarker) startMarker.remove();
+        startMarker = new maplibregl.Marker({ element: pacmanEl(), anchor: "center" })
+          .setLngLat([START[1], START[0]])
+          .setPopup(new maplibregl.Popup({ offset: 20 }).setText("Teatro Municipal"))
+          .addTo(map);
+        if (currentShape) rotatePacman(currentShape);
+      }
+
+      const form = document.getElementById("form");
+      const kmInput = document.getElementById("km");
+      const btn = document.getElementById("btn");
+      const statusEl = document.getElementById("status");
+      let requestId = 0;
+
+      form.addEventListener("submit", async function (ev) {
+        ev.preventDefault();
+        const target = Number(kmInput.value);
+        if (!Number.isFinite(target) || target < 1) {
+          setStatus("Ingresá una distancia de al menos 1 km.", true);
+          return;
+        }
+        const id = ++requestId;
+        btn.disabled = true;
+        setStatus("Armando la ruta…");
+        try {
+          const result = await suggestLoop(target);
+          if (id !== requestId) return;
+          drawRoute(result.shape);
+          const maps = googleMapsUrl(result.waypoints);
+          setStatus(
+            fmtKm(result.km) + " · unos " + fmtTime(result.km) +
+            ' · <a href="' + maps + '" target="_blank" rel="noopener">Abrir en Google Maps</a>'
+          );
+        } catch (err) {
+          if (id !== requestId) return;
+          setStatus("No pude armar una ruta cercana a esa distancia. Probá de nuevo.", true);
+        } finally {
+          if (id === requestId) btn.disabled = false;
+        }
+      });
+
+      function setStatus(html, isError) {
+        statusEl.className = isError ? "error" : "";
+        statusEl.innerHTML = html;
+      }
+
+      function drawRoute(shape) {
+        currentShape = shape;
+        if (!mapStyleReady) return;
+        const geo = {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "LineString",
+            coordinates: shape.map(function (p) { return [p[1], p[0]]; })
+          }
+        };
+        const src = map.getSource("route");
+        if (src) {
+          src.setData(geo);
+        } else {
+          map.addSource("route", { type: "geojson", data: geo });
+          map.addLayer({
+            id: "route-casing",
+            type: "line",
+            source: "route",
+            layout: { "line-cap": "round", "line-join": "round" },
+            paint: { "line-color": "#1919a6", "line-width": 5, "line-opacity": 0.92 }
+          });
+          map.addLayer({
+            id: "route-dots",
+            type: "line",
+            source: "route",
+            layout: { "line-cap": "round", "line-join": "round" },
+            paint: { "line-color": "#ffe08a", "line-width": 7, "line-dasharray": [0, 2.3], "line-opacity": 1 }
+          });
+        }
+        rotatePacman(shape);
+        placeFruit(shape);
+        const bounds = new maplibregl.LngLatBounds();
+        shape.forEach(function (p) { bounds.extend([p[1], p[0]]); });
+        map.fitBounds(bounds, { padding: 48, duration: 700 });
+        if (startMarker && startMarker.getPopup()) startMarker.togglePopup();
+      }
+
+      function fmtKm(km) {
+        return km.toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " km";
+      }
+
+      function fmtTime(km) {
+        const min = Math.round((km / 5) * 60);
+        const h = Math.floor(min / 60);
+        const m = min % 60;
+        if (h === 0) return m + " min";
+        if (m === 0) return h + " h";
+        return h + " h " + m + " min";
+      }
+
+      function googleMapsUrl(waypoints) {
+        const o = START[0] + "," + START[1];
+        const mid = waypoints.map(function (p) { return p[0] + "," + p[1]; }).join("|");
+        return "https://www.google.com/maps/dir/?api=1&origin=" + o +
+          "&destination=" + o + "&travelmode=walking&waypoints=" + encodeURIComponent(mid);
+      }
+
+      function destPoint(origin, bearing, distKm) {
+        const R = 6371;
+        const lat1 = origin[0] * Math.PI / 180;
+        const lon1 = origin[1] * Math.PI / 180;
+        const d = distKm / R;
+        const lat2 = Math.asin(Math.sin(lat1) * Math.cos(d) + Math.cos(lat1) * Math.sin(d) * Math.cos(bearing));
+        const lon2 = lon1 + Math.atan2(
+          Math.sin(bearing) * Math.sin(d) * Math.cos(lat1),
+          Math.cos(d) - Math.sin(lat1) * Math.sin(lat2)
+        );
+        return [lat2 * 180 / Math.PI, lon2 * 180 / Math.PI];
+      }
+
+      function exclusionPolygon(a, b, padM) {
+        const lat0 = ((a[0] + b[0]) / 2) * Math.PI / 180;
+        const mLat = 110540;
+        const mLon = 111320 * Math.cos(lat0);
+        const bx = (b[1] - a[1]) * mLon;
+        const by = (b[0] - a[0]) * mLat;
+        const len = Math.hypot(bx, by) || 1;
+        const ux = bx / len, uy = by / len;
+        const px = -uy, py = ux;
+        const corners = [];
+        for (const pair of [[-padM, -padM], [len + padM, -padM], [len + padM, padM], [-padM, padM]]) {
+          const s = pair[0], t = pair[1];
+          const x = ux * s + px * t;
+          const y = uy * s + py * t;
+          corners.push([a[1] + x / mLon, a[0] + y / mLat]);
+        }
+        corners.push(corners[0].slice());
+        return corners;
+      }
+
+      function pointToSegmentM(p, a, b) {
+        const lat0 = ((a[0] + b[0] + p[0]) / 3) * Math.PI / 180;
+        const mLat = 110540;
+        const mLon = 111320 * Math.cos(lat0);
+        const toXY = function (q) { return [(q[1] - a[1]) * mLon, (q[0] - a[0]) * mLat]; };
+        const xy = toXY(p);
+        const px = xy[0], py = xy[1];
+        const bxy = toXY(b);
+        const bx = bxy[0], by = bxy[1];
+        const len2 = bx * bx + by * by || 1;
+        const t = Math.max(0, Math.min(1, (px * bx + py * by) / len2));
+        return Math.hypot(px - bx * t, py - by * t);
+      }
+
+      function tooCloseToPaseo(points, extra) {
+        const limit = BUFFER_M + (extra || 0);
+        for (const p of points) {
+          if (pointToSegmentM(p, PASEO_A, PASEO_B) < limit) return true;
+        }
+        return false;
+      }
+
+      function decodePolyline(str, precision) {
+        const coords = [];
+        let index = 0, lat = 0, lng = 0;
+        const factor = Math.pow(10, precision || 6);
+        while (index < str.length) {
+          let result = 0, shift = 0, b;
+          do {
+            b = str.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+          } while (b >= 0x20);
+          const dlat = (result & 1) ? ~(result >> 1) : (result >> 1);
+          lat += dlat;
+          result = 0;
+          shift = 0;
+          do {
+            b = str.charCodeAt(index++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+          } while (b >= 0x20);
+          const dlng = (result & 1) ? ~(result >> 1) : (result >> 1);
+          lng += dlng;
+          coords.push([lat / factor, lng / factor]);
+        }
+        return coords;
+      }
+
+      function randomPattern() {
+        const n = 3 + Math.floor(Math.random() * 3);
+        const bearing0 = Math.random() * Math.PI * 2;
+        const offsetAng = Math.random() * Math.PI * 2;
+        const offsetFrac = Math.random() * 0.25;
+        const pts = [];
+        for (let i = 0; i < n; i++) {
+          pts.push({
+            ang: bearing0 + (Math.PI * 2 * i) / n + (Math.random() - 0.5) * 0.45,
+            radFrac: 0.85 + Math.random() * 0.3
+          });
+        }
+        return { offsetAng, offsetFrac, pts };
+      }
+
+      function applyPattern(pattern, targetKm, scale) {
+        const baseR = (targetKm / (Math.PI * 2)) * 0.9 * scale;
+        const center = destPoint(START, pattern.offsetAng, baseR * pattern.offsetFrac);
+        return pattern.pts.map(function (p) { return destPoint(center, p.ang, baseR * p.radFrac); });
+      }
+
+      async function routeValhalla(locations) {
+        const res = await fetch(VALHALLA_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            locations: locations.map(function (p) { return { lat: p[0], lon: p[1] }; }),
+            costing: "pedestrian",
+            directions_options: { units: "kilometers" },
+            exclude_polygons: [EXCLUDE_POLY]
+          })
+        });
+        if (!res.ok) throw new Error("valhalla " + res.status);
+        const data = await res.json();
+        if (!data.trip || !data.trip.legs) throw new Error("valhalla sin ruta");
+        const shape = [];
+        data.trip.legs.forEach(function (leg, i) {
+          const pts = decodePolyline(leg.shape, 6);
+          shape.push.apply(shape, i === 0 ? pts : pts.slice(1));
+        });
+        return { km: data.trip.summary.length, shape, source: "valhalla" };
+      }
+
+      async function routeOSRM(locations) {
+        const path = locations.map(function (p) { return p[1] + "," + p[0]; }).join(";");
+        const res = await fetch(OSRM_URL + "/" + path + "?overview=full&geometries=geojson");
+        if (!res.ok) throw new Error("osrm " + res.status);
+        const data = await res.json();
+        if (data.code !== "Ok" || !data.routes || !data.routes[0]) throw new Error("osrm sin ruta");
+        const r = data.routes[0];
+        return {
+          km: r.distance / 1000,
+          shape: r.geometry.coordinates.map(function (c) { return [c[1], c[0]]; }),
+          source: "osrm"
+        };
+      }
+
+      async function routeWalking(locations) {
+        try {
+          return await routeValhalla(locations);
+        } catch (err) {
+          return await routeOSRM(locations);
+        }
+      }
+
+      async function suggestLoop(targetKm) {
+        let lastError = null;
+        for (let s = 0; s < 6; s++) {
+          const pattern = randomPattern();
+          let scale = 1;
+          for (let i = 0; i < 5; i++) {
+            const waypoints = applyPattern(pattern, targetKm, scale);
+            if (tooCloseToPaseo(waypoints, 80)) break;
+            const locations = [START].concat(waypoints, [START]);
+            let route;
+            try {
+              route = await routeWalking(locations);
+            } catch (err) {
+              lastError = err;
+              break;
+            }
+            if (tooCloseToPaseo(route.shape)) break;
+            const ratio = route.km / targetKm;
+            if (ratio >= 0.9 && ratio <= 1.1) {
+              route.waypoints = waypoints;
+              return route;
+            }
+            scale *= targetKm / route.km;
+            scale = Math.max(0.35, Math.min(2.6, scale));
+          }
+        }
+        throw lastError || new Error("sin ruta");
+      }
+    }
+  </script>
+</body>
+</html>
