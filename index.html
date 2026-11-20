@@ -193,7 +193,14 @@
         "https://tile.openstreetmap.de/{z}/{x}/{y}.png"
       ]);
 
-      let map, startMarker, fruitMarker, currentShape = null, fallbackUsed = false, mapStyleReady = false;
+      let map, startMarker, fruitMarker, currentShape = null, currentRoute = null, fallbackUsed = false, mapStyleReady = false;
+      const STORAGE_KEY = "camine-senora-camine.ruta";
+      let autoStarted = false;
+      const form = document.getElementById("form");
+      const kmInput = document.getElementById("km");
+      const btn = document.getElementById("btn");
+      const statusEl = document.getElementById("status");
+      let requestId = 0;
 
       map = new maplibregl.Map({
         container: "map",
@@ -208,7 +215,7 @@
         mapStyleReady = true;
         map.resize();
         placeMarker();
-        if (currentShape) drawRoute(currentShape);
+        onMapReady();
       });
 
       map.on("error", function (e) {
@@ -230,7 +237,7 @@
       map.on("style.load", function () {
         mapStyleReady = true;
         placeMarker();
-        if (currentShape) drawRoute(currentShape);
+        if (currentRoute) applyRoute(currentRoute, false);
       });
 
       // If the vector style never settles, fall back after a few seconds.
@@ -299,22 +306,23 @@
         return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
       }
 
-      function rotatePacman(shape) {
+      function rotatePacman(deg) {
         if (!startMarker) return;
         const rot = startMarker.getElement().querySelector(".pacman-rot");
         if (!rot) return;
-        // SVG faces east; geographic bearing 0 is north.
-        rot.style.transform = "rotate(" + (routeBearing(shape) - 90) + "deg)";
+        rot.style.transform = "rotate(" + deg + "deg)";
       }
 
-      function placeFruit(shape) {
+      function randomFruitPoint(shape) {
+        return pointAlongRoute(shape, 0.25 + Math.random() * 0.5);
+      }
+
+      function placeFruit(pt) {
         if (fruitMarker) {
           fruitMarker.remove();
           fruitMarker = null;
         }
-        if (!shape || shape.length < 2) return;
-        const frac = 0.25 + Math.random() * 0.5;
-        const pt = pointAlongRoute(shape, frac);
+        if (!pt) return;
         fruitMarker = new maplibregl.Marker({ element: cherriesEl(), anchor: "center" })
           .setLngLat([pt[1], pt[0]])
           .addTo(map);
@@ -326,14 +334,8 @@
           .setLngLat([START[1], START[0]])
           .setPopup(new maplibregl.Popup({ offset: 20 }).setText("Teatro Municipal"))
           .addTo(map);
-        if (currentShape) rotatePacman(currentShape);
+        if (currentRoute) rotatePacman(currentRoute.pacmanDeg);
       }
-
-      const form = document.getElementById("form");
-      const kmInput = document.getElementById("km");
-      const btn = document.getElementById("btn");
-      const statusEl = document.getElementById("status");
-      let requestId = 0;
 
       form.addEventListener("submit", async function (ev) {
         ev.preventDefault();
@@ -342,24 +344,7 @@
           setStatus("Ingresá una distancia de al menos 1 km.", true);
           return;
         }
-        const id = ++requestId;
-        btn.disabled = true;
-        setStatus("Armando la ruta…");
-        try {
-          const result = await suggestLoop(target);
-          if (id !== requestId) return;
-          drawRoute(result.shape);
-          const maps = googleMapsUrl(result.waypoints);
-          setStatus(
-            fmtKm(result.km) + " · unos " + fmtTime(result.km) +
-            ' · <a href="' + maps + '" target="_blank" rel="noopener">Abrir en Google Maps</a>'
-          );
-        } catch (err) {
-          if (id !== requestId) return;
-          setStatus("No pude armar una ruta cercana a esa distancia. Probá de nuevo.", true);
-        } finally {
-          if (id === requestId) btn.disabled = false;
-        }
+        await generateAndShow(target, true);
       });
 
       function setStatus(html, isError) {
@@ -367,7 +352,100 @@
         statusEl.innerHTML = html;
       }
 
-      function drawRoute(shape) {
+      function isPoint(p) {
+        return Array.isArray(p) && p.length >= 2 && Number.isFinite(Number(p[0])) && Number.isFinite(Number(p[1]));
+      }
+
+      function isPointList(arr, minLen) {
+        return Array.isArray(arr) && arr.length >= minLen && arr.every(isPoint);
+      }
+
+      function validRoute(data) {
+        if (!data || typeof data !== "object") return false;
+        if (!isPointList(data.shape, 2)) return false;
+        if (!isPointList(data.waypoints, 1)) return false;
+        if (!Number.isFinite(Number(data.km)) || Number(data.km) <= 0) return false;
+        if (!isPoint(data.fruit)) return false;
+        if (!Number.isFinite(Number(data.pacmanDeg))) return false;
+        if (typeof data.maps !== "string" || data.maps.indexOf("https://www.google.com/maps") !== 0) return false;
+        return true;
+      }
+
+      function loadSavedRoute() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return null;
+          const data = JSON.parse(raw);
+          return validRoute(data) ? data : null;
+        } catch (err) {
+          return null;
+        }
+      }
+
+      function saveRoute(route) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(route));
+        } catch (err) {}
+      }
+
+      function routeStatusHtml(route) {
+        return fmtKm(route.km) + " · unos " + (route.time || fmtTime(route.km)) +
+          ' · <a href="' + route.maps + '" target="_blank" rel="noopener">Abrir en Google Maps</a>';
+      }
+
+      function applyRoute(route, openPopup) {
+        currentRoute = route;
+        currentShape = route.shape;
+        drawRoute(route);
+        setStatus(routeStatusHtml(route));
+        if (openPopup && startMarker && startMarker.getPopup() && !startMarker.getPopup().isOpen()) {
+          startMarker.togglePopup();
+        }
+      }
+
+      function onMapReady() {
+        if (currentRoute) {
+          applyRoute(currentRoute, false);
+          return;
+        }
+        const saved = loadSavedRoute();
+        if (saved) {
+          applyRoute(saved, false);
+          return;
+        }
+        if (autoStarted) return;
+        autoStarted = true;
+        generateAndShow(Number(kmInput.value) || 7, false);
+      }
+
+      async function generateAndShow(target, fromUser) {
+        const id = ++requestId;
+        btn.disabled = true;
+        setStatus("Armando la ruta…");
+        try {
+          const result = await suggestLoop(target);
+          if (id !== requestId) return;
+          const route = {
+            shape: result.shape,
+            waypoints: result.waypoints,
+            km: result.km,
+            time: fmtTime(result.km),
+            fruit: randomFruitPoint(result.shape),
+            pacmanDeg: routeBearing(result.shape) - 90,
+            maps: googleMapsUrl(result.waypoints)
+          };
+          applyRoute(route, fromUser);
+          saveRoute(route);
+        } catch (err) {
+          if (id !== requestId) return;
+          setStatus("No pude armar una ruta cercana a esa distancia. Probá de nuevo.", true);
+        } finally {
+          if (id === requestId) btn.disabled = false;
+        }
+      }
+
+      function drawRoute(route) {
+        const shape = route.shape;
         currentShape = shape;
         if (!mapStyleReady) return;
         const geo = {
@@ -398,12 +476,11 @@
             paint: { "line-color": "#ffe08a", "line-width": 7, "line-dasharray": [0, 2.3], "line-opacity": 1 }
           });
         }
-        rotatePacman(shape);
-        placeFruit(shape);
+        rotatePacman(route.pacmanDeg);
+        placeFruit(route.fruit);
         const bounds = new maplibregl.LngLatBounds();
         shape.forEach(function (p) { bounds.extend([p[1], p[0]]); });
         map.fitBounds(bounds, { padding: 48, duration: 700 });
-        if (startMarker && startMarker.getPopup()) startMarker.togglePopup();
       }
 
       function fmtKm(km) {
