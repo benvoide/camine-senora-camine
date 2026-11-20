@@ -2,8 +2,8 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Rutas random — Bahía Blanca</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Camine, señora, camine - Generador de rutas al azar en Bahía Blanca</title>
   <style>
     :root {
       --bg: #f3efe6;
@@ -97,11 +97,116 @@
     }
     .pacman-rot { transform-origin: 50% 50%; }
     .fruit-marker svg { width: 32px; height: 32px; margin: 1px; }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .actions button, .btn-secondary, .btn-ghost {
+      min-height: 48px;
+      padding: 10px 16px;
+      font-size: 1rem;
+    }
+    .btn-secondary {
+      background: #1d3557;
+      color: #fff;
+      border: 0;
+      border-radius: 6px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-ghost {
+      background: #fff;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #walk-banner, #congrats-banner {
+      display: none;
+      margin-top: 10px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 0.98rem;
+      line-height: 1.4;
+    }
+    #walk-banner.show, #congrats-banner.show { display: block; }
+    #walk-banner {
+      background: #fff6d8;
+      border: 1px solid #e6d089;
+    }
+    #congrats-banner {
+      background: #e7f6ea;
+      border: 1px solid #b7dfc0;
+    }
+    .user-dot {
+      width: 18px;
+      height: 18px;
+      background: #1a73e8;
+      border: 3px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 0 7px rgba(26,115,232,0.28);
+    }
+    dialog.modal {
+      border: 0;
+      border-radius: 12px;
+      padding: 0;
+      width: calc(100% - 24px);
+      max-width: 520px;
+      max-height: 88vh;
+      background: var(--card);
+      color: var(--ink);
+      box-shadow: 0 16px 50px rgba(0,0,0,0.25);
+    }
+    dialog.modal::backdrop { background: rgba(0,0,0,0.45); }
+    .modal-body { padding: 16px 18px 18px; overflow: auto; max-height: 88vh; }
+    .modal-body h2 { margin: 0 0 12px; font-size: 1.15rem; }
+    .modal-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+    .tabs button[aria-selected="true"] { background: var(--accent); color: #fff; }
+    .hist-item, .week-row {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 0 0 8px;
+      background: #fff;
+    }
+    .hist-item { cursor: pointer; display: flex; gap: 10px; align-items: center; }
+    .hist-item img { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; flex: none; }
+    .hist-meta { font-size: 0.88rem; color: var(--muted); }
+    .badge { display: inline-block; font-size: 0.75rem; font-weight: 700; padding: 2px 7px; border-radius: 999px; }
+    .badge.ok { background: #e7f6ea; color: #215c3a; }
+    .badge.no { background: #f3efe6; color: #5e574c; }
+    .bars { display: flex; align-items: flex-end; gap: 6px; height: 90px; margin: 8px 0 4px; }
+    .bars .bar {
+      flex: 1;
+      background: var(--accent);
+      border-radius: 4px 4px 0 0;
+      min-height: 2px;
+    }
+    .bars-labels { display: flex; gap: 6px; font-size: 0.72rem; color: var(--muted); }
+    .bars-labels span { flex: 1; text-align: center; }
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+    .stat-card { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+    .stat-card strong { display: block; font-size: 1.25rem; }
+    .hist-photo { max-width: 100%; border-radius: 8px; margin: 10px 0; }
+    #foto-input { display: none; }
+    @media (max-width: 640px) {
+      header { padding: 10px 12px 10px; }
+      h1 { font-size: 1.02rem; line-height: 1.3; }
+      .lead { font-size: 0.85rem; margin-bottom: 8px; }
+      #status { margin-top: 8px; font-size: 0.9rem; }
+      #map { min-height: 220px; }
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1>Rutas random</h1>
+    <h1>Camine, señora, camine - Generador de rutas al azar en Bahía Blanca</h1>
     <p class="lead">Vueltas a pie desde el Teatro Municipal (Alsina 425).</p>
     <form id="form">
       <label>
@@ -110,9 +215,51 @@
       </label>
       <button type="submit" id="btn">Sugerir ruta</button>
     </form>
+    <div class="actions">
+      <button type="button" id="btn-walk" class="btn-secondary">Empezar caminata</button>
+      <button type="button" id="btn-reset" class="btn-ghost">Reiniciar / editar</button>
+      <button type="button" id="btn-hist" class="btn-ghost">Historial</button>
+    </div>
     <div id="status">Elegí la distancia y tocá Sugerir ruta.</div>
+    <div id="walk-banner">
+      <div>¡Llegaste a las cerezas! Sacá una foto</div>
+      <div class="modal-actions">
+        <button type="button" id="btn-foto">Sacá una foto</button>
+      </div>
+    </div>
+    <div id="congrats-banner"></div>
+    <input id="foto-input" type="file" accept="image/*" capture="environment">
   </header>
   <div id="map"></div>
+
+  <dialog class="modal" id="modal-reset">
+    <div class="modal-body">
+      <h2>Reiniciar / editar</h2>
+      <p>Se borra el progreso de la caminata actual. Si ya habías recorrido algo, se guarda en el historial como incompleta.</p>
+      <div class="modal-actions">
+        <button type="button" id="reset-same">Reiniciar esta ruta</button>
+        <button type="button" id="reset-new" class="btn-secondary">Nueva ruta con la distancia indicada</button>
+        <button type="button" id="reset-cancel" class="btn-ghost">Cancelar</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="modal" id="modal-hist">
+    <div class="modal-body">
+      <h2>Historial</h2>
+      <div class="tabs">
+        <button type="button" class="btn-ghost" id="tab-walks" aria-selected="true">Recorridos</button>
+        <button type="button" class="btn-ghost" id="tab-stats" aria-selected="false">Estadísticas</button>
+      </div>
+      <div id="hist-walks"></div>
+      <div id="hist-stats" hidden></div>
+      <div class="modal-actions">
+        <button type="button" id="hist-back" class="btn-ghost" hidden>Volver al listado</button>
+        <button type="button" id="hist-current" class="btn-ghost" hidden>Volver a la caminata actual</button>
+        <button type="button" id="hist-close" class="btn-ghost">Cerrar</button>
+      </div>
+    </div>
+  </dialog>
 
   <script>
     const MAPLIBRE_CSS = [
@@ -203,6 +350,62 @@
       const btn = document.getElementById("btn");
       const statusEl = document.getElementById("status");
       let requestId = 0;
+
+
+      const SIM_MODE = /(?:\?|&)sim=1(?:&|$)/.test(location.search);
+      if (SIM_MODE) {
+        window.__walkDebug = function () {
+          return {
+            progressM: walk ? walk.progressM : 0,
+            total: walkTrack ? walkTrack.totalM : 0,
+            ratio: (walk && walkTrack && walkTrack.totalM) ? walk.progressM / walkTrack.totalM : 0,
+            cherryPrompted: !!(walk && walk.cherryPrompted),
+            photo: !!(walk && walk.cherryPhotoId),
+            complete: !!(walk && walk.complete),
+            watching: !!(walk && walk.watching),
+            banner: walkBanner.classList.contains("show"),
+            congrats: congratsBanner.classList.contains("show")
+          };
+        };
+      }
+      const WALK_KEY = "camine-senora-camine.walk";
+      const GREENS_KEY = "camine-senora-camine.greens";
+      const DB_NAME = "camine-senora-camine";
+      const SNAP_MAX_M = 40;
+      const SKIP_MAX_M = 120;
+      const FRUIT_PROX_M = 30;
+      const GREEN_FALLBACK = [
+        { name: "Plaza Rivadavia", lat: -38.717624, lon: -62.265541, kind: "park" },
+        { name: "Parque de Mayo", lat: -38.696446, lon: -62.269177, kind: "park" },
+        { name: "Parque de Mayo (entrada Alem y Córdoba)", lat: -38.701153, lon: -62.271225, kind: "park" },
+        { name: "Paseo de las Esculturas", lat: -38.707453, lon: -62.257518, kind: "park" },
+        { name: "Paseo de las Esculturas (Napostá)", lat: -38.705876, lon: -62.260516, kind: "park" },
+        { name: "Parque Independencia", lat: -38.718016, lon: -62.240824, kind: "park" },
+        { name: "Plaza Almirante Brown", lat: -38.727088, lon: -62.257485, kind: "park" },
+        { name: "Plaza Bartolomé Mitre", lat: -38.729062, lon: -62.245913, kind: "park" },
+        { name: "Plaza 1 de Mayo", lat: -38.719646, lon: -62.305016, kind: "park" }
+      ];
+      let greensList = null;
+      let greensReady = null;
+      let walk = null;
+      let walkTrack = null;
+      let userMarker = null;
+      let geoWatch = null;
+      let simTimer = null;
+      let wakeLock = null;
+      let viewingHistoryId = null;
+      let fruitAlongM = 0;
+
+      const btnWalk = document.getElementById("btn-walk");
+      const btnReset = document.getElementById("btn-reset");
+      const btnHist = document.getElementById("btn-hist");
+      const walkBanner = document.getElementById("walk-banner");
+      const congratsBanner = document.getElementById("congrats-banner");
+      const fotoInput = document.getElementById("foto-input");
+      const modalReset = document.getElementById("modal-reset");
+      const modalHist = document.getElementById("modal-hist");
+      greensList = GREEN_FALLBACK;
+      ensureGreens();
 
       map = new maplibregl.Map({
         container: "map",
@@ -516,6 +719,7 @@
         btn.disabled = true;
         setStatus("Armando la ruta…");
         try {
+          if (fromUser) await abandonWalkIfNeeded();
           const result = await suggestLoop(target);
           if (id !== requestId) return;
           const route = {
@@ -574,6 +778,8 @@
         const bounds = new maplibregl.LngLatBounds();
         shape.forEach(function (p) { bounds.extend([p[1], p[0]]); });
         map.fitBounds(bounds, { padding: 48, duration: 700 });
+        if (mapStyleReady) ensureWalkLayers();
+        if (!viewingHistoryId) bindWalkToRoute(route);
         startAnim(route);
       }
 
@@ -637,25 +843,863 @@
         return coords;
       }
 
+
+      function shuffle(arr) {
+        const a = arr.slice();
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+        }
+        return a;
+      }
+
+      async function ensureGreens() {
+        if (greensList) return greensList;
+        if (greensReady) return greensReady;
+        greensReady = (async function () {
+          try {
+            const cached = JSON.parse(localStorage.getItem(GREENS_KEY) || "null");
+            if (cached && Array.isArray(cached.greens) && cached.greens.length && (Date.now() - cached.ts) < 7 * 24 * 3600 * 1000) {
+              greensList = cached.greens;
+              return greensList;
+            }
+          } catch (err) {}
+          const query = '[out:json][timeout:25];(' +
+            'way["leisure"~"^(park|garden|playground)$"](around:4000,-38.714775,-62.260133);' +
+            'relation["leisure"~"^(park|garden)$"](around:4000,-38.714775,-62.260133);' +
+            'way["landuse"~"^(grass|recreation_ground)$"](around:4000,-38.714775,-62.260133);' +
+            'node["place"="square"](around:4000,-38.714775,-62.260133);' +
+            'way["place"="square"](around:4000,-38.714775,-62.260133);' +
+            'node["leisure"~"^(park|garden)$"](around:4000,-38.714775,-62.260133);' +
+            ');out center tags;';
+          const endpoints = [
+            "https://overpass-api.de/api/interpreter",
+            "https://overpass.kumi.systems/api/interpreter"
+          ];
+          for (let e = 0; e < endpoints.length; e++) {
+            try {
+              const ctl = new AbortController();
+              const to = setTimeout(function () { ctl.abort(); }, 12000);
+              const res = await fetch(endpoints[e], {
+                method: "POST",
+                body: "data=" + encodeURIComponent(query),
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                signal: ctl.signal
+              });
+              clearTimeout(to);
+              if (!res.ok) continue;
+              const data = await res.json();
+              const seen = {};
+              const list = [];
+              (data.elements || []).forEach(function (el) {
+                const tags = el.tags || {};
+                const lat = el.lat || (el.center && el.center.lat);
+                const lon = el.lon || (el.center && el.center.lon);
+                if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+                const key = lat.toFixed(4) + "," + lon.toFixed(4);
+                if (seen[key]) return;
+                seen[key] = 1;
+                list.push({
+                  name: tags.name || tags["name:es"] || "Espacio verde",
+                  lat: lat,
+                  lon: lon,
+                  kind: tags.leisure || tags.place || tags.landuse || "park"
+                });
+              });
+              if (list.length >= 5) {
+                greensList = list;
+                try { localStorage.setItem(GREENS_KEY, JSON.stringify({ ts: Date.now(), greens: list })); } catch (err) {}
+                return greensList;
+              }
+            } catch (err) {}
+          }
+          greensList = GREEN_FALLBACK;
+          return greensList;
+        })();
+        return greensReady;
+      }
+
+      function pickGreenInSector(ang, minKm, maxKm, greens, used) {
+        const half = 0.7;
+        const cand = [];
+        for (let i = 0; i < greens.length; i++) {
+          const g = greens[i];
+          if (used && used[g.lat + "," + g.lon]) continue;
+          const d = distM(START, [g.lat, g.lon]) / 1000;
+          if (d < minKm || d > maxKm) continue;
+          let b = bearingBetween(START, [g.lat, g.lon]) * Math.PI / 180;
+          let diff = Math.abs(b - ang);
+          diff = Math.min(diff, Math.PI * 2 - diff);
+          if (diff <= half) cand.push(g);
+        }
+        if (!cand.length) return null;
+        return cand[Math.floor(Math.random() * cand.length)];
+      }
+
+      function openIdb() {
+        return new Promise(function (resolve, reject) {
+          const req = indexedDB.open(DB_NAME, 1);
+          req.onupgradeneeded = function () {
+            const db = req.result;
+            if (!db.objectStoreNames.contains("walks")) db.createObjectStore("walks", { keyPath: "id" });
+            if (!db.objectStoreNames.contains("photos")) db.createObjectStore("photos", { keyPath: "id" });
+          };
+          req.onsuccess = function () { resolve(req.result); };
+          req.onerror = function () { reject(req.error); };
+        });
+      }
+
+      function idbPut(store, value) {
+        return openIdb().then(function (db) {
+          return new Promise(function (resolve, reject) {
+            const tx = db.transaction(store, "readwrite");
+            tx.objectStore(store).put(value);
+            tx.oncomplete = function () { resolve(value); };
+            tx.onerror = function () { reject(tx.error); };
+          });
+        });
+      }
+
+      function idbGet(store, id) {
+        return openIdb().then(function (db) {
+          return new Promise(function (resolve, reject) {
+            const tx = db.transaction(store, "readonly");
+            const req = tx.objectStore(store).get(id);
+            req.onsuccess = function () { resolve(req.result || null); };
+            req.onerror = function () { reject(req.error); };
+          });
+        });
+      }
+
+      function idbAll(store) {
+        return openIdb().then(function (db) {
+          return new Promise(function (resolve, reject) {
+            const tx = db.transaction(store, "readonly");
+            const req = tx.objectStore(store).getAll();
+            req.onsuccess = function () { resolve(req.result || []); };
+            req.onerror = function () { reject(req.error); };
+          });
+        });
+      }
+
+      function idbDel(store, id) {
+        return openIdb().then(function (db) {
+          return new Promise(function (resolve, reject) {
+            const tx = db.transaction(store, "readwrite");
+            tx.objectStore(store).delete(id);
+            tx.oncomplete = function () { resolve(); };
+            tx.onerror = function () { reject(tx.error); };
+          });
+        });
+      }
+
+      function newWalkState() {
+        return {
+          id: "w-" + Date.now() + "-" + Math.floor(Math.random() * 1e6),
+          progressM: 0,
+          startedAt: null,
+          gpsTrack: [],
+          cherryPrompted: false,
+          cherryPhotoId: null,
+          complete: false,
+          watching: false,
+          routeSig: null,
+          kmWalked: 0
+        };
+      }
+
+      function routeSig(route) {
+        return JSON.stringify({
+          km: route && Math.round((route.km || 0) * 1000),
+          fruit: route && route.fruit,
+          wp: route && route.waypoints
+        });
+      }
+
+      function saveWalk() {
+        try {
+          if (!walk) localStorage.removeItem(WALK_KEY);
+          else localStorage.setItem(WALK_KEY, JSON.stringify(walk));
+        } catch (err) {}
+      }
+
+      function loadWalk() {
+        try {
+          const data = JSON.parse(localStorage.getItem(WALK_KEY) || "null");
+          if (!data || typeof data !== "object") return null;
+          if (!Number.isFinite(data.progressM) || data.progressM < 0) return null;
+          return data;
+        } catch (err) {
+          return null;
+        }
+      }
+
+      function emptyLine() {
+        return { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: [] } };
+      }
+
+      function lineFromLatLon(pts) {
+        return {
+          type: "Feature",
+          properties: {},
+          geometry: { type: "LineString", coordinates: pts.map(function (p) { return [p[1], p[0]]; }) }
+        };
+      }
+
+      function ensureWalkLayers() {
+        if (!map.getSource("walk-progress")) {
+          map.addSource("walk-progress", { type: "geojson", data: emptyLine() });
+          map.addLayer({
+            id: "walk-progress",
+            type: "line",
+            source: "walk-progress",
+            layout: { "line-cap": "round", "line-join": "round" },
+            paint: { "line-color": "#c8c8c8", "line-width": 9, "line-opacity": 0.92 }
+          });
+        }
+        if (!map.getSource("walk-gps")) {
+          map.addSource("walk-gps", { type: "geojson", data: emptyLine() });
+          map.addLayer({
+            id: "walk-gps",
+            type: "line",
+            source: "walk-gps",
+            layout: { "line-cap": "round", "line-join": "round" },
+            paint: { "line-color": "#e85d04", "line-width": 3.5, "line-opacity": 0.85 }
+          });
+        }
+      }
+
+      function sliceTrack(track, dist) {
+        if (!track || track.totalM <= 0) return [];
+        const d = Math.max(0, Math.min(dist, track.totalM));
+        const pts = [track.shape[0]];
+        for (let i = 1; i < track.shape.length; i++) {
+          if (track.cum[i] <= d) pts.push(track.shape[i]);
+          else {
+            pts.push(pointAlongDistance(track, d));
+            break;
+          }
+        }
+        return pts;
+      }
+
+      function projectOnSeg(p, a, b) {
+        const lat0 = ((a[0] + b[0] + p[0]) / 3) * Math.PI / 180;
+        const mLat = 110540, mLon = 111320 * Math.cos(lat0);
+        const ax = 0, ay = 0;
+        const bx = (b[1] - a[1]) * mLon, by = (b[0] - a[0]) * mLat;
+        const px = (p[1] - a[1]) * mLon, py = (p[0] - a[0]) * mLat;
+        const len2 = bx * bx + by * by || 1;
+        const t = Math.max(0, Math.min(1, (px * bx + py * by) / len2));
+        const qx = ax + t * bx, qy = ay + t * by;
+        return {
+          t: t,
+          distTo: Math.hypot(px - qx, py - qy),
+          distOnSeg: Math.hypot(qx, qy),
+          pt: [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]
+        };
+      }
+
+      function nearestOnRoute(track, pt) {
+        let best = { distTo: Infinity, along: 0, pt: track.shape[0] };
+        for (let i = 1; i < track.shape.length; i++) {
+          const proj = projectOnSeg(pt, track.shape[i - 1], track.shape[i]);
+          const along = track.cum[i - 1] + proj.distOnSeg;
+          if (proj.distTo < best.distTo) best = { distTo: proj.distTo, along: along, pt: proj.pt };
+        }
+        return best;
+      }
+
+      function updateProgressVisuals() {
+        if (!mapStyleReady || !walkTrack) return;
+        ensureWalkLayers();
+        const covered = walk ? walk.progressM : 0;
+        const slice = sliceTrack(walkTrack, covered);
+        map.getSource("walk-progress").setData(slice.length >= 2 ? lineFromLatLon(slice) : emptyLine());
+        const gps = (walk && walk.gpsTrack) || [];
+        map.getSource("walk-gps").setData(gps.length >= 2 ? lineFromLatLon(gps.map(function (g) { return [g.lat, g.lon]; })) : emptyLine());
+      }
+
+      function setUserDot(lat, lon) {
+        if (!mapStyleReady) return;
+        if (!userMarker) {
+          const el = document.createElement("div");
+          el.className = "user-dot";
+          userMarker = new maplibregl.Marker({ element: el, anchor: "center" })
+            .setLngLat([lon, lat])
+            .addTo(map);
+        } else {
+          userMarker.setLngLat([lon, lat]);
+        }
+      }
+
+      function removeUserDot() {
+        if (userMarker) { userMarker.remove(); userMarker = null; }
+      }
+
+      function fruitDistanceOnRoute(track, fruit) {
+        if (!fruit || !track) return track ? track.totalM * 0.5 : 0;
+        return nearestOnRoute(track, fruit).along;
+      }
+
+      function walkedDistanceM(w) {
+        if (!w) return 0;
+        const pts = w.gpsTrack || [];
+        let d = 0;
+        for (let i = 1; i < pts.length; i++) d += distM([pts[i - 1].lat, pts[i - 1].lon], [pts[i].lat, pts[i].lon]);
+        if (d > 0) return d;
+        return w.progressM || 0;
+      }
+
+      function applyGpsFix(lat, lon, t) {
+        if (!walk || !walkTrack || walk.complete) return;
+        const pt = [lat, lon];
+        setUserDot(lat, lon);
+        walk.gpsTrack.push({ lat: lat, lon: lon, t: t || Date.now() });
+        if (walk.gpsTrack.length > 4000) walk.gpsTrack = walk.gpsTrack.slice(-3000);
+        const snap = nearestOnRoute(walkTrack, pt);
+        if (snap.distTo <= SNAP_MAX_M) {
+          const along = snap.along;
+          const delta = along - walk.progressM;
+          const maxSkip = SIM_MODE ? Math.max(SKIP_MAX_M, walkTrack.totalM / 8) : SKIP_MAX_M;
+          if (delta >= 0 && delta <= maxSkip) {
+            walk.progressM = along;
+          }
+        }
+        walk.kmWalked = walkedDistanceM(walk) / 1000;
+        updateProgressVisuals();
+        maybeCherryPrompt(pt);
+        maybeComplete(pt);
+        saveWalk();
+      }
+
+      function maybeCherryPrompt(pt) {
+        if (!walk || walk.cherryPrompted || !currentRoute) return;
+        const nearFruit = distM(pt, currentRoute.fruit) <= FRUIT_PROX_M;
+        const passed = walk.progressM >= Math.max(0, fruitAlongM - 15);
+        if (nearFruit || passed) {
+          walk.cherryPrompted = true;
+          walkBanner.classList.add("show");
+          saveWalk();
+          if (SIM_MODE && simTimer) {
+            clearInterval(simTimer);
+            simTimer = null;
+          }
+        }
+      }
+
+      function maybeComplete(pt) {
+        if (!walk || walk.complete || !walkTrack) return;
+        const ratio = walk.progressM / walkTrack.totalM;
+        const leftStart = walk.progressM > Math.min(80, walkTrack.totalM * 0.05);
+        const nearEnd = distM(pt, START) <= 60 || (walkTrack.totalM - walk.progressM) <= 40;
+        if (leftStart && ratio >= 0.95 && nearEnd) {
+          finishWalk(true);
+        }
+      }
+
+      async function requestWake() {
+        try {
+          if (navigator.wakeLock && document.visibilityState === "visible") {
+            wakeLock = await navigator.wakeLock.request("screen");
+          }
+        } catch (err) {}
+      }
+
+      function releaseWake() {
+        if (wakeLock) {
+          try { wakeLock.release(); } catch (err) {}
+          wakeLock = null;
+        }
+      }
+
+      function stopGps() {
+        if (geoWatch != null && navigator.geolocation) {
+          try { navigator.geolocation.clearWatch(geoWatch); } catch (err) {}
+          geoWatch = null;
+        }
+        if (simTimer) { clearInterval(simTimer); simTimer = null; }
+        if (walk) walk.watching = false;
+        releaseWake();
+        btnWalk.textContent = (walk && walk.progressM > 0 && !walk.complete) ? "Seguir caminata" : "Empezar caminata";
+        btnWalk.disabled = false;
+      }
+
+      function startSim() {
+        if (!walkTrack) return;
+        const total = walkTrack.totalM;
+        const durationS = 12;
+        if (simTimer) clearInterval(simTimer);
+        let last = Date.now();
+        simTimer = setInterval(function () {
+          if (!walk || walk.complete) { clearInterval(simTimer); simTimer = null; return; }
+          if (walkBanner.classList.contains("show")) { last = Date.now(); return; }
+          const now = Date.now();
+          const dt = Math.min(1, (now - last) / 1000);
+          last = now;
+          const next = Math.min(total, walk.progressM + (total / durationS) * dt);
+          const pt = pointAlongDistance(walkTrack, next);
+          applyGpsFix(pt[0], pt[1], Date.now());
+        }, 100);
+      }
+
+      function startWalk() {
+        if (!currentRoute || !walkTrack) {
+          setStatus("Primero hace falta una ruta.", true);
+          return;
+        }
+        if (walk && walk.complete) walk = newWalkState();
+        if (!walk) walk = newWalkState();
+        walk.routeSig = routeSig(currentRoute);
+        if (!walk.startedAt) walk.startedAt = Date.now();
+        walk.watching = true;
+        walk.complete = false;
+        congratsBanner.classList.remove("show");
+        btnWalk.textContent = "Caminando…";
+        btnWalk.disabled = true;
+        saveWalk();
+        requestWake();
+        if (SIM_MODE) {
+          startSim();
+          return;
+        }
+        if (!navigator.geolocation) {
+          setStatus("Este dispositivo no tiene geolocalización.", true);
+          stopGps();
+          return;
+        }
+        geoWatch = navigator.geolocation.watchPosition(
+          function (pos) {
+            applyGpsFix(pos.coords.latitude, pos.coords.longitude, pos.timestamp || Date.now());
+          },
+          function (err) {
+            setStatus("No pude usar el GPS: " + (err && err.message ? err.message : "permiso denegado") + ".", true);
+            stopGps();
+          },
+          { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 }
+        );
+      }
+
+      function fmtDurationMs(ms) {
+        const s = Math.max(0, Math.round((ms || 0) / 1000));
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = s % 60;
+        if (h === 0 && m === 0) return sec + " s";
+        if (h === 0 && sec === 0) return m + " min";
+        if (h === 0) return m + " min " + sec + " s";
+        if (m === 0) return h + " h";
+        return h + " h " + m + " min";
+      }
+
+      function dateLabel(ts) {
+        return new Date(ts).toLocaleString("es-AR", { timeZone: APP_TZ, dateStyle: "short", timeStyle: "short" });
+      }
+
+      async function persistWalkRecord(complete) {
+        if (!walk || !currentRoute) return;
+        const ended = Date.now();
+        const started = walk.startedAt || ended;
+        const rec = {
+          id: walk.id,
+          createdAt: started,
+          endedAt: ended,
+          durationMs: Math.max(0, ended - started),
+          kmPlanned: currentRoute.km,
+          kmWalked: walkedDistanceM(walk) / 1000,
+          complete: !!complete,
+          shape: currentRoute.shape,
+          waypoints: currentRoute.waypoints,
+          fruit: currentRoute.fruit,
+          gpsTrack: walk.gpsTrack || [],
+          photoId: walk.cherryPhotoId || null,
+          maps: currentRoute.maps
+        };
+        try { await idbPut("walks", rec); } catch (err) {}
+        return rec;
+      }
+
+      async function finishWalk(complete) {
+        if (!walk || walk.complete) return;
+        walk.complete = true;
+        walk.watching = false;
+        stopGps();
+        const km = walkedDistanceM(walk) / 1000;
+        walk.kmWalked = km;
+        const dur = Math.max(0, Date.now() - (walk.startedAt || Date.now()));
+        saveWalk();
+        congratsBanner.innerHTML = "<strong>¡Listo! Completaste la vuelta.</strong> " +
+          fmtKm(km) + " recorridos en " + fmtDurationMs(dur) + ".";
+        congratsBanner.classList.add("show");
+        walkBanner.classList.remove("show");
+        try { await persistWalkRecord(true); } catch (err) {}
+      }
+
+      async function abandonWalkIfNeeded() {
+        if (walk && !walk.complete && walk.progressM > 50 && walk.startedAt) {
+          try { await persistWalkRecord(false); } catch (err) {}
+        }
+      }
+
+      function resetProgressKeepRoute() {
+        stopGps();
+        walkBanner.classList.remove("show");
+        congratsBanner.classList.remove("show");
+        removeUserDot();
+        walk = newWalkState();
+        if (currentRoute) walk.routeSig = routeSig(currentRoute);
+        saveWalk();
+        updateProgressVisuals();
+        btnWalk.textContent = "Empezar caminata";
+        btnWalk.disabled = false;
+      }
+
+      function bindWalkToRoute(route) {
+        walkTrack = route && route.shape ? buildTrack(route.shape) : null;
+        fruitAlongM = walkTrack ? fruitDistanceOnRoute(walkTrack, route.fruit) : 0;
+        const saved = loadWalk();
+        const sig = routeSig(route);
+        if (saved && saved.routeSig === sig && !viewingHistoryId) {
+          walk = saved;
+          if (walk.complete) {
+            congratsBanner.classList.add("show");
+          } else if (walk.cherryPrompted && !walk.cherryPhotoId) {
+            walkBanner.classList.add("show");
+          }
+          btnWalk.textContent = (walk.progressM > 0 && !walk.complete) ? "Seguir caminata" : "Empezar caminata";
+        } else if (!viewingHistoryId) {
+          walk = newWalkState();
+          walk.routeSig = sig;
+          walkBanner.classList.remove("show");
+          congratsBanner.classList.remove("show");
+          btnWalk.textContent = "Empezar caminata";
+        }
+        updateProgressVisuals();
+      }
+
+      function compressPhoto(file) {
+        return new Promise(function (resolve, reject) {
+          const img = new Image();
+          img.onload = function () {
+            const max = 1280;
+            let w = img.width, h = img.height;
+            if (w > max || h > max) {
+              const r = Math.min(max / w, max / h);
+              w = Math.round(w * r);
+              h = Math.round(h * r);
+            }
+            const canvas = document.createElement("canvas");
+            canvas.width = w;
+            canvas.height = h;
+            canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+            canvas.toBlob(function (blob) {
+              URL.revokeObjectURL(img.src);
+              if (blob) resolve(blob);
+              else reject(new Error("foto"));
+            }, "image/jpeg", 0.8);
+          };
+          img.onerror = function () { reject(new Error("imagen")); };
+          img.src = URL.createObjectURL(file);
+        });
+      }
+
+      async function handlePhoto(file) {
+        if (!file || !walk) return;
+        try {
+          const blob = await compressPhoto(file);
+          const photoId = "p-" + walk.id;
+          await idbPut("photos", { id: photoId, blob: blob, mime: "image/jpeg", ts: Date.now() });
+          walk.cherryPhotoId = photoId;
+          walkBanner.classList.remove("show");
+          saveWalk();
+          if (SIM_MODE && walk.watching && !walk.complete) startSim();
+        } catch (err) {
+          setStatus("No pude guardar la foto. Probá de nuevo.", true);
+        }
+      }
+
+      document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "visible" && walk && walk.watching && !walk.complete) requestWake();
+      });
+
+      btnWalk.addEventListener("click", function () { startWalk(); });
+      btnReset.addEventListener("click", function () { modalReset.showModal(); });
+      document.getElementById("reset-cancel").addEventListener("click", function () { modalReset.close(); });
+      document.getElementById("reset-same").addEventListener("click", async function () {
+        modalReset.close();
+        await abandonWalkIfNeeded();
+        resetProgressKeepRoute();
+      });
+      document.getElementById("reset-new").addEventListener("click", async function () {
+        modalReset.close();
+        const target = Number(kmInput.value);
+        if (!Number.isFinite(target) || target < 1) {
+          setStatus("Ingresá una distancia de al menos 1 km.", true);
+          return;
+        }
+        await abandonWalkIfNeeded();
+        resetProgressKeepRoute();
+        await generateAndShow(target, true);
+      });
+      btnHist.addEventListener("click", function () { openHistory("list"); });
+      document.getElementById("hist-close").addEventListener("click", function () { modalHist.close(); });
+      document.getElementById("tab-walks").addEventListener("click", function () { showHistTab("walks"); });
+      document.getElementById("tab-stats").addEventListener("click", function () { showHistTab("stats"); });
+      document.getElementById("hist-back").addEventListener("click", function () { openHistory("list"); });
+      document.getElementById("hist-current").addEventListener("click", function () {
+        modalHist.close();
+        viewingHistoryId = null;
+        if (currentRoute) applyRoute(currentRoute, false);
+      });
+      document.getElementById("btn-foto").addEventListener("click", function () { fotoInput.click(); });
+      fotoInput.addEventListener("change", function () {
+        const f = fotoInput.files && fotoInput.files[0];
+        fotoInput.value = "";
+        if (f) handlePhoto(f);
+      });
+
+      function showHistTab(which) {
+        const walks = which === "walks";
+        document.getElementById("hist-walks").hidden = !walks;
+        document.getElementById("hist-stats").hidden = walks;
+        document.getElementById("tab-walks").setAttribute("aria-selected", walks ? "true" : "false");
+        document.getElementById("tab-stats").setAttribute("aria-selected", walks ? "false" : "true");
+        document.getElementById("hist-back").hidden = true;
+        if (!walks) renderStats();
+      }
+
+      async function openHistory(mode) {
+        modalHist.showModal();
+        if (mode === "stats") showHistTab("stats");
+        else {
+          showHistTab("walks");
+          await renderWalkList();
+        }
+      }
+
+      async function renderWalkList() {
+        const box = document.getElementById("hist-walks");
+        document.getElementById("hist-back").hidden = true;
+        document.getElementById("hist-current").hidden = !viewingHistoryId;
+        const walks = (await idbAll("walks")).sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+        if (!walks.length) {
+          box.innerHTML = "<p class='hist-meta'>Todavía no hay recorridos guardados.</p>";
+          return;
+        }
+        box.innerHTML = "";
+        for (let i = 0; i < walks.length; i++) {
+          const w = walks[i];
+          const item = document.createElement("div");
+          item.className = "hist-item";
+          item.tabIndex = 0;
+          const km = (w.kmWalked || 0).toLocaleString("es-AR", { maximumFractionDigits: 2 });
+          const badge = w.complete ? "<span class='badge ok'>Completa</span>" : "<span class='badge no'>Incompleta</span>";
+          item.innerHTML = "<div><div><strong>" + dateLabel(w.createdAt || w.endedAt) + "</strong> " + badge +
+            "</div><div class='hist-meta'>" + km + " km · " + fmtDurationMs(w.durationMs) + "</div></div>";
+          if (w.photoId) {
+            try {
+              const ph = await idbGet("photos", w.photoId);
+              if (ph && ph.blob) {
+                const img = document.createElement("img");
+                img.alt = "Foto de las cerezas";
+                img.src = URL.createObjectURL(ph.blob);
+                item.prepend(img);
+              }
+            } catch (err) {}
+          }
+          item.addEventListener("click", function () { showWalkDetail(w.id); });
+          box.appendChild(item);
+        }
+      }
+
+      async function showWalkDetail(id) {
+        const w = await idbGet("walks", id);
+        if (!w) return;
+        const box = document.getElementById("hist-walks");
+        document.getElementById("hist-stats").hidden = true;
+        document.getElementById("hist-walks").hidden = false;
+        document.getElementById("tab-walks").setAttribute("aria-selected", "true");
+        document.getElementById("hist-back").hidden = false;
+        document.getElementById("hist-current").hidden = false;
+        const km = (w.kmWalked || 0).toLocaleString("es-AR", { maximumFractionDigits: 2 });
+        const badge = w.complete ? "<span class='badge ok'>Completa</span>" : "<span class='badge no'>Incompleta</span>";
+        box.innerHTML = "<div><strong>" + dateLabel(w.createdAt || w.endedAt) + "</strong> " + badge +
+          "</div><div class='hist-meta'>" + km + " km caminados · " + fmtDurationMs(w.durationMs) +
+          (w.kmPlanned ? " · ruta de " + fmtKm(w.kmPlanned) : "") + "</div>" +
+          "<div class='modal-actions'><button type='button' id='hist-showmap'>Ver en el mapa</button>" +
+          "<button type='button' id='hist-del' class='btn-ghost'>Borrar</button></div>";
+        if (w.photoId) {
+          try {
+            const ph = await idbGet("photos", w.photoId);
+            if (ph && ph.blob) {
+              const img = document.createElement("img");
+              img.className = "hist-photo";
+              img.alt = "Foto en las cerezas";
+              img.src = URL.createObjectURL(ph.blob);
+              box.insertBefore(img, box.querySelector(".modal-actions"));
+            }
+          } catch (err) {}
+        }
+        document.getElementById("hist-showmap").addEventListener("click", function () {
+          modalHist.close();
+          showHistoricalOnMap(w);
+        });
+        document.getElementById("hist-del").addEventListener("click", async function () {
+          if (!confirm("¿Borrar este recorrido del historial?")) return;
+          try {
+            if (w.photoId) await idbDel("photos", w.photoId);
+            await idbDel("walks", w.id);
+          } catch (err) {}
+          if (viewingHistoryId === w.id) {
+            viewingHistoryId = null;
+            if (currentRoute) applyRoute(currentRoute, false);
+          }
+          await renderWalkList();
+        });
+      }
+
+      function showHistoricalOnMap(w) {
+        viewingHistoryId = w.id;
+        stopGps();
+        const route = {
+          shape: w.shape,
+          waypoints: w.waypoints || [],
+          km: w.kmPlanned || w.kmWalked || 0,
+          fruit: w.fruit,
+          pacmanDeg: 0,
+          maps: w.maps || "#"
+        };
+        drawRoute(route);
+        if (w.gpsTrack && w.gpsTrack.length && map.getSource("walk-gps")) {
+          map.getSource("walk-gps").setData(lineFromLatLon(w.gpsTrack.map(function (g) { return [g.lat, g.lon]; })));
+        }
+        if (map.getSource("walk-progress")) map.getSource("walk-progress").setData(emptyLine());
+        setStatus("Viendo un recorrido del historial · " + dateLabel(w.createdAt || w.endedAt) +
+          ' · <a href="#" id="link-back-current">Volver a la actual</a>');
+        const link = document.getElementById("link-back-current");
+        if (link) link.addEventListener("click", function (ev) {
+          ev.preventDefault();
+          viewingHistoryId = null;
+          if (currentRoute) applyRoute(currentRoute, false);
+        });
+      }
+
+      const APP_TZ = "America/Buenos_Aires";
+
+      function baYmd(ts) {
+        return new Intl.DateTimeFormat("en-CA", {
+          timeZone: APP_TZ, year: "numeric", month: "2-digit", day: "2-digit"
+        }).format(new Date(ts));
+      }
+
+      function startOfDay(ts) {
+        return Date.parse(baYmd(ts) + "T00:00:00-03:00");
+      }
+
+      function startOfWeek(ts) {
+        const name = new Intl.DateTimeFormat("en-US", { timeZone: APP_TZ, weekday: "short" }).format(new Date(ts));
+        const dow = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 }[name] || 0;
+        return startOfDay(ts) - dow * 86400000;
+      }
+
+      function startOfMonth(ts) {
+        return Date.parse(baYmd(ts).slice(0, 7) + "-01T00:00:00-03:00");
+      }
+
+      async function renderStats() {
+        const box = document.getElementById("hist-stats");
+        const walks = await idbAll("walks");
+        const now = Date.now();
+        const week0 = startOfWeek(now);
+        const dayNames = ["L", "M", "M", "J", "V", "S", "D"];
+        const byDay = [0, 0, 0, 0, 0, 0, 0];
+        let allKm = 0, nComplete = 0, nWalks = walks.length;
+        const byWeek = {};
+        const byMonth = {};
+        const daysWith = {};
+        walks.forEach(function (w) {
+          const km = w.kmWalked || 0;
+          allKm += km;
+          if (w.complete) nComplete += 1;
+          const ts = w.createdAt || w.endedAt || now;
+          const dow = Math.floor((startOfDay(ts) - startOfWeek(ts)) / 86400000);
+          if (startOfWeek(ts) === week0 && dow >= 0 && dow < 7) byDay[dow] += km;
+          const wk = startOfWeek(ts);
+          byWeek[wk] = (byWeek[wk] || 0) + km;
+          const mo = startOfMonth(ts);
+          byMonth[mo] = (byMonth[mo] || 0) + km;
+          if (km > 0) daysWith[startOfDay(ts)] = true;
+        });
+        const maxDay = Math.max(0.1, Math.max.apply(null, byDay));
+        const bars = byDay.map(function (v) {
+          const h = Math.round((v / maxDay) * 90);
+          return "<div class='bar' title='" + v.toFixed(2) + " km' style='height:" + h + "px'></div>";
+        }).join("");
+        const labels = dayNames.map(function (n) { return "<span>" + n + "</span>"; }).join("");
+        const weekKeys = Object.keys(byWeek).map(Number).sort(function (a, b) { return b - a; });
+        const prevWeeks = weekKeys.filter(function (k) { return k < week0; }).slice(0, 8).map(function (k) {
+          const d = new Date(k);
+          const label = d.toLocaleDateString("es-AR", { timeZone: APP_TZ, day: "2-digit", month: "2-digit" });
+          return "<div class='week-row'><strong>" + (byWeek[k] || 0).toLocaleString("es-AR", { maximumFractionDigits: 1 }) +
+            " km</strong><div class='hist-meta'>Semana del " + label + "</div></div>";
+        }).join("") || "<p class='hist-meta'>No hay semanas anteriores todavía.</p>";
+        const monthKeys = Object.keys(byMonth).map(Number).sort(function (a, b) { return b - a; }).slice(0, 8);
+        const months = monthKeys.map(function (k) {
+          const label = new Date(k).toLocaleDateString("es-AR", { timeZone: APP_TZ, month: "long", year: "numeric" });
+          return "<div class='week-row'><strong>" + (byMonth[k] || 0).toLocaleString("es-AR", { maximumFractionDigits: 1 }) +
+            " km</strong><div class='hist-meta' >" + label.charAt(0).toUpperCase() + label.slice(1) + "</div></div>";
+        }).join("") || "<p class='hist-meta'>Sin datos mensuales.</p>";
+        let streak = 0;
+        let cursor = startOfDay(now);
+        if (!daysWith[cursor]) cursor -= 86400000;
+        while (daysWith[cursor]) { streak += 1; cursor -= 86400000; }
+        const thisWeekKm = byDay.reduce(function (a, b) { return a + b; }, 0);
+        box.innerHTML = "<div class='stat-grid'>" +
+          "<div class='stat-card'><span class='hist-meta'>Esta semana</span><strong>" + thisWeekKm.toLocaleString("es-AR", { maximumFractionDigits: 1 }) + " km</strong></div>" +
+          "<div class='stat-card'><span class='hist-meta'>Total</span><strong>" + allKm.toLocaleString("es-AR", { maximumFractionDigits: 1 }) + " km</strong></div>" +
+          "<div class='stat-card'><span class='hist-meta'>Caminatas</span><strong>" + nWalks + "</strong></div>" +
+          "<div class='stat-card'><span class='hist-meta'>Vueltas completas</span><strong>" + nComplete + "</strong></div>" +
+          "<div class='stat-card'><span class='hist-meta'>Racha</span><strong>" + streak + " día" + (streak === 1 ? "" : "s") + "</strong></div>" +
+          "</div>" +
+          "<h3 style='font-size:1rem;margin:12px 0 0'>Esta semana (lun–dom)</h3>" +
+          "<div class='bars'>" + bars + "</div><div class='bars-labels'>" + labels + "</div>" +
+          "<h3 style='font-size:1rem;margin:14px 0 6px'>Semanas anteriores</h3>" + prevWeeks +
+          "<h3 style='font-size:1rem;margin:14px 0 6px'>Por mes</h3>" + months;
+      }
+
       function randomPattern() {
         const n = 3 + Math.floor(Math.random() * 3);
         const bearing0 = Math.random() * Math.PI * 2;
-        const offsetAng = Math.random() * Math.PI * 2;
-        const offsetFrac = Math.random() * 0.25;
+        const snapN = Math.min(3, Math.max(2, n - 1));
+        const order = [];
+        for (let i = 0; i < n; i++) order.push(i);
+        const snapIdx = {};
+        shuffle(order).slice(0, snapN).forEach(function (i) { snapIdx[i] = true; });
         const pts = [];
         for (let i = 0; i < n; i++) {
           pts.push({
-            ang: bearing0 + (Math.PI * 2 * i) / n + (Math.random() - 0.5) * 0.45,
-            radFrac: 0.85 + Math.random() * 0.3
+            ang: bearing0 + (Math.PI * 2 * i) / n + (Math.random() - 0.5) * 0.25,
+            radFrac: 0.88 + Math.random() * 0.24,
+            wantGreen: !!snapIdx[i]
           });
         }
-        return { offsetAng, offsetFrac, pts };
+        return { bearing0: bearing0, pts: pts };
       }
 
       function applyPattern(pattern, targetKm, scale) {
-        const baseR = (targetKm / (Math.PI * 2)) * 0.9 * scale;
-        const center = destPoint(START, pattern.offsetAng, baseR * pattern.offsetFrac);
-        return pattern.pts.map(function (p) { return destPoint(center, p.ang, baseR * p.radFrac); });
+        const baseR = (targetKm / (Math.PI * 2)) * 0.95 * scale;
+        const greens = greensList || GREEN_FALLBACK;
+        const used = {};
+        return pattern.pts.map(function (p) {
+          if (p.wantGreen) {
+            const g = pickGreenInSector(p.ang, Math.max(0.25, baseR * 0.45), baseR * 1.55, greens, used);
+            if (g) {
+              used[g.lat + "," + g.lon] = 1;
+              return [g.lat, g.lon];
+            }
+          }
+          return destPoint(START, p.ang, baseR * p.radFrac);
+        });
       }
 
       async function routeValhalla(locations) {
@@ -703,7 +1747,7 @@
 
       async function suggestLoop(targetKm) {
         let lastError = null;
-        for (let s = 0; s < 6; s++) {
+        for (let s = 0; s < 8; s++) {
           const pattern = randomPattern();
           let scale = 1;
           for (let i = 0; i < 5; i++) {
