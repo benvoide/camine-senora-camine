@@ -195,7 +195,9 @@
 
       let map, startMarker, fruitMarker, currentShape = null, currentRoute = null, fallbackUsed = false, mapStyleReady = false;
       const STORAGE_KEY = "camine-senora-camine.ruta";
+      const LAP_SECONDS = 36;
       let autoStarted = false;
+      let animRaf = 0;
       const form = document.getElementById("form");
       const kmInput = document.getElementById("km");
       const btn = document.getElementById("btn");
@@ -248,7 +250,7 @@
       function pacmanEl() {
         const el = document.createElement("div");
         el.className = "pacman-marker";
-        el.innerHTML = '<div class="pacman-rot"><svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M16 16 L26.72 7 A14 14 0 1 0 26.72 25 Z" fill="#ffe000" stroke="#c9a800" stroke-width="1" stroke-linejoin="round"/><circle cx="16.5" cy="10" r="2.1" fill="#1d1a16"/></svg></div>';
+        el.innerHTML = '<div class="pacman-rot"><svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path class="pacman-mouth" d="M16 16 L26.72 7 A14 14 0 1 0 26.72 25 Z" fill="#ffe000" stroke="#c9a800" stroke-width="1" stroke-linejoin="round"/><circle cx="16.5" cy="10" r="2.1" fill="#1d1a16"/></svg></div>';
         return el;
       }
 
@@ -313,6 +315,96 @@
         rot.style.transform = "rotate(" + deg + "deg)";
       }
 
+      function stopAnim() {
+        if (animRaf) {
+          cancelAnimationFrame(animRaf);
+          animRaf = 0;
+        }
+      }
+
+      function pacmanMouthPath(openDeg) {
+        const r = 14, cx = 16, cy = 16;
+        const rad = Math.max(1, openDeg) * Math.PI / 180;
+        const x1 = cx + r * Math.cos(rad);
+        const y1 = cy - r * Math.sin(rad);
+        const x2 = cx + r * Math.cos(rad);
+        const y2 = cy + r * Math.sin(rad);
+        return "M" + cx + " " + cy + " L" + x1.toFixed(2) + " " + y1.toFixed(2) +
+          " A" + r + " " + r + " 0 1 0 " + x2.toFixed(2) + " " + y2.toFixed(2) + " Z";
+      }
+
+      function bearingBetween(from, to) {
+        const lat1 = from[0] * Math.PI / 180;
+        const lat2 = to[0] * Math.PI / 180;
+        const dLon = (to[1] - from[1]) * Math.PI / 180;
+        const y = Math.sin(dLon) * Math.cos(lat2);
+        const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+        return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+      }
+
+      function buildTrack(shape) {
+        const cum = [0];
+        for (let i = 1; i < shape.length; i++) {
+          cum.push(cum[i - 1] + distM(shape[i - 1], shape[i]));
+        }
+        return { shape: shape, cum: cum, totalM: cum[cum.length - 1] };
+      }
+
+      function pointAlongDistance(track, dist) {
+        const total = track.totalM;
+        const shape = track.shape;
+        const cum = track.cum;
+        if (!shape.length) return START;
+        if (total <= 0) return shape[0];
+        let d = dist % total;
+        if (d < 0) d += total;
+        let lo = 0, hi = cum.length - 1;
+        while (lo < hi - 1) {
+          const mid = (lo + hi) >> 1;
+          if (cum[mid] <= d) lo = mid;
+          else hi = mid;
+        }
+        const span = cum[hi] - cum[lo];
+        const t = span > 0 ? (d - cum[lo]) / span : 0;
+        const a = shape[lo], b = shape[hi];
+        return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+      }
+
+      function poseAt(track, dist) {
+        const pt = pointAlongDistance(track, dist);
+        const look = Math.min(25, Math.max(8, track.totalM * 0.004));
+        const ahead = pointAlongDistance(track, dist + look);
+        return { pt: pt, deg: bearingBetween(pt, ahead) - 90 };
+      }
+
+      function startAnim(route) {
+        stopAnim();
+        if (!route || !route.shape || route.shape.length < 2 || !startMarker) return;
+        const track = buildTrack(route.shape);
+        if (track.totalM <= 0) return;
+        const el = startMarker.getElement();
+        const mouth = el.querySelector(".pacman-mouth");
+        const rot = el.querySelector(".pacman-rot");
+        if (startMarker.getPopup() && startMarker.getPopup().isOpen()) {
+          startMarker.getPopup().remove();
+        }
+        const t0 = performance.now();
+        function frame(now) {
+          animRaf = requestAnimationFrame(frame);
+          const elapsed = (now - t0) / 1000;
+          const pose = poseAt(track, (elapsed / LAP_SECONDS) * track.totalM);
+          startMarker.setLngLat([pose.pt[1], pose.pt[0]]);
+          if (rot) rot.style.transform = "rotate(" + pose.deg + "deg)";
+          const chomp = 0.5 + 0.5 * Math.sin(elapsed * Math.PI * 2 * 3.5);
+          if (mouth) mouth.setAttribute("d", pacmanMouthPath(5 + 37 * chomp));
+        }
+        const start = poseAt(track, 0);
+        startMarker.setLngLat([start.pt[1], start.pt[0]]);
+        if (rot) rot.style.transform = "rotate(" + start.deg + "deg)";
+        if (mouth) mouth.setAttribute("d", pacmanMouthPath(42));
+        animRaf = requestAnimationFrame(frame);
+      }
+
       function randomFruitPoint(shape) {
         return pointAlongRoute(shape, 0.25 + Math.random() * 0.5);
       }
@@ -329,6 +421,7 @@
       }
 
       function placeMarker() {
+        stopAnim();
         if (startMarker) startMarker.remove();
         startMarker = new maplibregl.Marker({ element: pacmanEl(), anchor: "center" })
           .setLngLat([START[1], START[0]])
@@ -481,6 +574,7 @@
         const bounds = new maplibregl.LngLatBounds();
         shape.forEach(function (p) { bounds.extend([p[1], p[0]]); });
         map.fitBounds(bounds, { padding: 48, duration: 700 });
+        startAnim(route);
       }
 
       function fmtKm(km) {
