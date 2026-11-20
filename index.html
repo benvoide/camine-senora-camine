@@ -102,7 +102,7 @@
 <body>
   <header>
     <h1>Rutas random</h1>
-    <p class="lead">Vueltas a pie desde el Teatro Municipal (Alsina 425), sin pasar por el Paseo de las Esculturas.</p>
+    <p class="lead">Vueltas a pie desde el Teatro Municipal (Alsina 425).</p>
     <form id="form">
       <label>
         Distancia (km)
@@ -167,14 +167,10 @@
 
     function initApp() {
       const START = [-38.714775, -62.260133];
-      const PASEO_A = [-38.7059, -62.2605];
-      const PASEO_B = [-38.7077, -62.2574];
-      const BUFFER_M = 150;
       const VALHALLA_URL = "https://valhalla1.openstreetmap.de/route";
       const OSRM_URL = "https://routing.openstreetmap.de/routed-foot/route/v1/foot";
       const OFM_STYLE = "https://tiles.openfreemap.org/styles/liberty";
       const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
-      const EXCLUDE_POLY = exclusionPolygon(PASEO_A, PASEO_B, 180);
 
       // CARTO's public basemaps now require an API key, so the raster
       // fallback is OSM.de (same OSM data, works without a key from file://).
@@ -443,48 +439,6 @@
         return [lat2 * 180 / Math.PI, lon2 * 180 / Math.PI];
       }
 
-      function exclusionPolygon(a, b, padM) {
-        const lat0 = ((a[0] + b[0]) / 2) * Math.PI / 180;
-        const mLat = 110540;
-        const mLon = 111320 * Math.cos(lat0);
-        const bx = (b[1] - a[1]) * mLon;
-        const by = (b[0] - a[0]) * mLat;
-        const len = Math.hypot(bx, by) || 1;
-        const ux = bx / len, uy = by / len;
-        const px = -uy, py = ux;
-        const corners = [];
-        for (const pair of [[-padM, -padM], [len + padM, -padM], [len + padM, padM], [-padM, padM]]) {
-          const s = pair[0], t = pair[1];
-          const x = ux * s + px * t;
-          const y = uy * s + py * t;
-          corners.push([a[1] + x / mLon, a[0] + y / mLat]);
-        }
-        corners.push(corners[0].slice());
-        return corners;
-      }
-
-      function pointToSegmentM(p, a, b) {
-        const lat0 = ((a[0] + b[0] + p[0]) / 3) * Math.PI / 180;
-        const mLat = 110540;
-        const mLon = 111320 * Math.cos(lat0);
-        const toXY = function (q) { return [(q[1] - a[1]) * mLon, (q[0] - a[0]) * mLat]; };
-        const xy = toXY(p);
-        const px = xy[0], py = xy[1];
-        const bxy = toXY(b);
-        const bx = bxy[0], by = bxy[1];
-        const len2 = bx * bx + by * by || 1;
-        const t = Math.max(0, Math.min(1, (px * bx + py * by) / len2));
-        return Math.hypot(px - bx * t, py - by * t);
-      }
-
-      function tooCloseToPaseo(points, extra) {
-        const limit = BUFFER_M + (extra || 0);
-        for (const p of points) {
-          if (pointToSegmentM(p, PASEO_A, PASEO_B) < limit) return true;
-        }
-        return false;
-      }
-
       function decodePolyline(str, precision) {
         const coords = [];
         let index = 0, lat = 0, lng = 0;
@@ -540,8 +494,7 @@
           body: JSON.stringify({
             locations: locations.map(function (p) { return { lat: p[0], lon: p[1] }; }),
             costing: "pedestrian",
-            directions_options: { units: "kilometers" },
-            exclude_polygons: [EXCLUDE_POLY]
+            directions_options: { units: "kilometers" }
           })
         });
         if (!res.ok) throw new Error("valhalla " + res.status);
@@ -584,7 +537,6 @@
           let scale = 1;
           for (let i = 0; i < 5; i++) {
             const waypoints = applyPattern(pattern, targetKm, scale);
-            if (tooCloseToPaseo(waypoints, 80)) break;
             const locations = [START].concat(waypoints, [START]);
             let route;
             try {
@@ -593,7 +545,6 @@
               lastError = err;
               break;
             }
-            if (tooCloseToPaseo(route.shape)) break;
             const ratio = route.km / targetKm;
             if (ratio >= 0.9 && ratio <= 1.1) {
               route.waypoints = waypoints;
