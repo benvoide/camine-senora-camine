@@ -443,6 +443,79 @@
       opacity: 1;
       transform: none;
     }
+    #modal-victory { max-width: 440px; }
+    #modal-victory .modal-body { padding: 24px 24px 20px; }
+    #victory-title {
+      margin: 0 0 16px;
+      font-family: var(--font-display);
+      font-size: 48px;
+      font-weight: 700;
+      line-height: 0.95;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--ink);
+    }
+    .victory-kicker {
+      margin: 0 0 4px;
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--mute);
+    }
+    #victory-time {
+      margin: 0 0 8px;
+      font-family: var(--font-display);
+      font-size: 56px;
+      font-weight: 600;
+      line-height: 1;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+    }
+    #victory-dist {
+      margin: 0 0 16px;
+      font-family: var(--font-body);
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--charcoal);
+    }
+    #victory-map {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      background: var(--soft-cloud);
+      overflow: hidden;
+    }
+    #victory-map svg { display: block; width: 100%; height: 100%; }
+    #victory-photo {
+      margin: 12px 0 0;
+      background: var(--soft-cloud);
+    }
+    #victory-photo img {
+      display: block;
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+    }
+    #victory-new {
+      background: var(--ink);
+      color: var(--on-primary);
+      border: 0;
+      min-height: 48px;
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: 500;
+      border-radius: var(--radius-lg);
+    }
+    #victory-new:hover { filter: none; background: #000; }
+    #confetti-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      pointer-events: none;
+      display: none;
+    }
+    #confetti-canvas.is-on { display: block; }
     dialog.modal::backdrop {
       background: rgba(17, 17, 17, 0.45);
       opacity: 0;
@@ -845,6 +918,10 @@
       .modal-body { padding: 18px 16px; }
     }
   
+    @media (max-width: 640px) {
+      #victory-title { font-size: 36px; }
+      #victory-time { font-size: 40px; }
+    }
 </style>
 </head>
 <body>
@@ -951,9 +1028,27 @@
     </div>
   </dialog>
 
+  <dialog class="modal" id="modal-victory" aria-labelledby="victory-title">
+    <div class="modal-body victory-body">
+      <h2 id="victory-title">LLEGASTE</h2>
+      <p class="victory-kicker">Tiempo</p>
+      <p id="victory-time">0:00</p>
+      <p id="victory-dist"></p>
+      <div id="victory-map" aria-hidden="true"></div>
+      <figure id="victory-photo" hidden>
+        <img id="victory-photo-img" alt="Foto en las cerezas">
+      </figure>
+      <div class="modal-actions">
+        <button type="button" id="victory-new">Nueva ruta</button>
+        <button type="button" id="victory-close" class="btn-ghost">Cerrar</button>
+      </div>
+    </div>
+  </dialog>
+  <canvas id="confetti-canvas" aria-hidden="true"></canvas>
+
 
   <script>
-    const APP_VERSION = "16";
+    const APP_VERSION = "17";
     function applyAppVersion() {
       document.querySelectorAll("[data-app-version]").forEach(function (el) {
         el.textContent = "v" + APP_VERSION;
@@ -1164,6 +1259,7 @@
       const modalReset = document.getElementById("modal-reset");
       const modalHist = document.getElementById("modal-hist");
       const modalHelp = document.getElementById("modal-help");
+      const modalVictory = document.getElementById("modal-victory");
       greensList = GREEN_FALLBACK;
       ensureGreens();
 
@@ -2410,12 +2506,12 @@
             type: "line",
             source: "walk-progress",
             layout: { "line-cap": "round", "line-join": "round" },
-            paint: { "line-color": "#3a3a3a", "line-width": 10, "line-opacity": 1 }
+            paint: { "line-color": "#6b6b6b", "line-width": 10, "line-opacity": 0.85 }
           });
         } else {
-          map.setPaintProperty("walk-progress", "line-color", "#3a3a3a");
+          map.setPaintProperty("walk-progress", "line-color", "#6b6b6b");
           map.setPaintProperty("walk-progress", "line-width", 10);
-          map.setPaintProperty("walk-progress", "line-opacity", 1);
+          map.setPaintProperty("walk-progress", "line-opacity", 0.85);
         }
         if (!map.getSource("walk-gps")) {
           map.addSource("walk-gps", { type: "geojson", data: emptyLine() });
@@ -2424,12 +2520,12 @@
             type: "line",
             source: "walk-gps",
             layout: { "line-cap": "round", "line-join": "round" },
-            paint: { "line-color": "#3a3a3a", "line-width": 8, "line-opacity": 1 }
+            paint: { "line-color": "#6b6b6b", "line-width": 8, "line-opacity": 0.85 }
           });
         } else {
-          map.setPaintProperty("walk-gps", "line-color", "#3a3a3a");
+          map.setPaintProperty("walk-gps", "line-color", "#6b6b6b");
           map.setPaintProperty("walk-gps", "line-width", 8);
-          map.setPaintProperty("walk-gps", "line-opacity", 1);
+          map.setPaintProperty("walk-gps", "line-opacity", 0.85);
         }
       }
 
@@ -2625,7 +2721,7 @@
           return;
         }
         const total = walkTrack.totalM;
-        const durationS = 12;
+        const durationS = 30;
         if (simTimer) clearInterval(simTimer);
         let last = Date.now();
         simTimer = setInterval(function () {
@@ -2650,6 +2746,7 @@
         if (simTimer) { clearInterval(simTimer); simTimer = null; }
         hideCherryBanner();
         if (congratsBanner) congratsBanner.classList.remove("show");
+        hideVictory();
         removeUserDot();
         document.body.classList.remove("walking");
         walk = newWalkState();
@@ -2739,6 +2836,165 @@
         return h + " h " + m + " min";
       }
 
+      function fmtClockMs(ms) {
+        const s = Math.max(0, Math.round((ms || 0) / 1000));
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = s % 60;
+        const pad = function (n) { return (n < 10 ? "0" : "") + n; };
+        if (h > 0) return h + ":" + pad(m) + ":" + pad(sec);
+        return m + ":" + pad(sec);
+      }
+
+      function routeThumbSvg(pts) {
+        if (!pts || pts.length < 2) return "";
+        let minLat = 90, maxLat = -90, minLon = 180, maxLon = -180;
+        pts.forEach(function (p) {
+          const lat = Number(p[0]), lon = Number(p[1]);
+          if (lat < minLat) minLat = lat;
+          if (lat > maxLat) maxLat = lat;
+          if (lon < minLon) minLon = lon;
+          if (lon > maxLon) maxLon = lon;
+        });
+        const midLat = (minLat + maxLat) / 2;
+        const lonScale = Math.cos(midLat * Math.PI / 180) || 1;
+        const worldW = Math.max(1e-6, (maxLon - minLon) * lonScale);
+        const worldH = Math.max(1e-6, maxLat - minLat);
+        const w = 320, h = 200, margin = 18;
+        const scale = Math.min((w - margin * 2) / worldW, (h - margin * 2) / worldH);
+        const ox = (w - worldW * scale) / 2;
+        const oy = (h - worldH * scale) / 2;
+        function xy(p) {
+          const x = ox + (Number(p[1]) - minLon) * lonScale * scale;
+          const y = oy + (maxLat - Number(p[0])) * scale;
+          return x.toFixed(1) + "," + y.toFixed(1);
+        }
+        const d = pts.map(xy).join(" ");
+        const start = xy(pts[0]).split(",");
+        const end = xy(pts[pts.length - 1]).split(",");
+        return '<svg viewBox="0 0 ' + w + ' ' + h + '" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+          '<rect width="' + w + '" height="' + h + '" fill="#f5f5f5"/>' +
+          '<polyline points="' + d + '" fill="none" stroke="#2121b0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>' +
+          '<polyline points="' + d + '" fill="none" stroke="#ffd54a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+          '<circle cx="' + start[0] + '" cy="' + start[1] + '" r="4" fill="#111111"/>' +
+          '<circle cx="' + end[0] + '" cy="' + end[1] + '" r="4" fill="#111111"/>' +
+          "</svg>";
+      }
+
+      let victoryPhotoUrl = null;
+      let confettiRaf = 0;
+      function stopConfetti() {
+        if (confettiRaf) { cancelAnimationFrame(confettiRaf); confettiRaf = 0; }
+        const canvas = document.getElementById("confetti-canvas");
+        if (canvas) {
+          canvas.classList.remove("is-on");
+          const ctx = canvas.getContext && canvas.getContext("2d");
+          if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+      function playConfetti() {
+        stopConfetti();
+        if (prefersReducedMotion()) return;
+        const canvas = document.getElementById("confetti-canvas");
+        if (!canvas || !canvas.getContext) return;
+        const ctx = canvas.getContext("2d");
+        const W = window.innerWidth, H = window.innerHeight;
+        canvas.width = W;
+        canvas.height = H;
+        canvas.classList.add("is-on");
+        const colors = ["#2121b0", "#ffd54a", "#111111", "#ffffff"];
+        const pieces = [];
+        const n = Math.min(90, Math.max(48, Math.round(W / 16)));
+        for (let i = 0; i < n; i++) {
+          pieces.push({
+            x: Math.random() * W,
+            y: -20 - Math.random() * H * 0.35,
+            vx: (Math.random() - 0.5) * 4,
+            vy: 2 + Math.random() * 4,
+            w: 5 + Math.random() * 7,
+            h: 7 + Math.random() * 9,
+            rot: Math.random() * Math.PI,
+            vr: (Math.random() - 0.5) * 0.25,
+            color: colors[i % colors.length]
+          });
+        }
+        const t0 = performance.now();
+        const life = 2600;
+        function frame(now) {
+          const t = now - t0;
+          ctx.clearRect(0, 0, W, H);
+          pieces.forEach(function (p) {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.08;
+            p.rot += p.vr;
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot);
+            ctx.globalAlpha = t > life - 500 ? Math.max(0, 1 - (t - (life - 500)) / 500) : 1;
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+            ctx.restore();
+          });
+          if (t < life) confettiRaf = requestAnimationFrame(frame);
+          else stopConfetti();
+        }
+        confettiRaf = requestAnimationFrame(frame);
+      }
+
+      function hideVictory() {
+        stopConfetti();
+        closeDialog(modalVictory);
+        if (victoryPhotoUrl) {
+          try { URL.revokeObjectURL(victoryPhotoUrl); } catch (err) {}
+          victoryPhotoUrl = null;
+        }
+        const img = document.getElementById("victory-photo-img");
+        if (img) img.removeAttribute("src");
+        const fig = document.getElementById("victory-photo");
+        if (fig) fig.hidden = true;
+      }
+
+      async function showVictory(opts) {
+        opts = opts || {};
+        const dur = opts.durationMs || 0;
+        const km = opts.km || 0;
+        const timeEl = document.getElementById("victory-time");
+        const distEl = document.getElementById("victory-dist");
+        const mapEl = document.getElementById("victory-map");
+        if (timeEl) timeEl.textContent = fmtClockMs(dur);
+        if (distEl) distEl.textContent = fmtKm(km);
+        let pts = opts.shape;
+        if ((!pts || pts.length < 2) && walk && walk.gpsTrack && walk.gpsTrack.length >= 2) {
+          pts = walk.gpsTrack.map(function (g) { return [g.lat, g.lon]; });
+        }
+        if ((!pts || pts.length < 2) && currentRoute && currentRoute.shape) pts = currentRoute.shape;
+        if (mapEl) mapEl.innerHTML = routeThumbSvg(pts);
+        const fig = document.getElementById("victory-photo");
+        const img = document.getElementById("victory-photo-img");
+        if (victoryPhotoUrl) {
+          try { URL.revokeObjectURL(victoryPhotoUrl); } catch (err) {}
+          victoryPhotoUrl = null;
+        }
+        if (fig) fig.hidden = true;
+        if (img) img.removeAttribute("src");
+        const photoId = opts.photoId || (walk && walk.cherryPhotoId);
+        if (photoId && img && fig) {
+          try {
+            const rec = await idbGet("photos", photoId);
+            if (rec && rec.blob) {
+              victoryPhotoUrl = URL.createObjectURL(rec.blob);
+              img.src = victoryPhotoUrl;
+              fig.hidden = false;
+            }
+          } catch (err) {}
+        }
+        hideCherryBanner();
+        if (congratsBanner) congratsBanner.classList.remove("show");
+        openDialog(modalVictory);
+        if (opts.confetti !== false) playConfetti();
+      }
+
       function dateLabel(ts) {
         return new Date(ts).toLocaleString("es-AR", { timeZone: APP_TZ, dateStyle: "short", timeStyle: "short" });
       }
@@ -2780,12 +3036,17 @@
         walk.kmWalked = km;
         const dur = Math.max(0, Date.now() - (walk.startedAt || Date.now()));
         saveWalk();
-        congratsBanner.innerHTML = "<strong>¡Listo! Completaste la vuelta.</strong> " +
-          fmtKm(km) + " recorridos en " + fmtDurationMs(dur) + ".";
-        congratsBanner.classList.add("show");
         walkBanner.classList.remove("show");
-        revealPanel();
+        if (congratsBanner) congratsBanner.classList.remove("show");
+        const gpsPts = (walk.gpsTrack || []).map(function (g) { return [g.lat, g.lon]; });
         try { await persistWalkRecord(true); } catch (err) {}
+        await showVictory({
+          durationMs: dur,
+          km: km,
+          shape: gpsPts.length >= 2 ? gpsPts : (currentRoute && currentRoute.shape),
+          photoId: walk.cherryPhotoId || null,
+          confetti: true
+        });
       }
 
       async function abandonWalkIfNeeded() {
@@ -2798,6 +3059,7 @@
         stopGps();
         walkBanner.classList.remove("show");
         congratsBanner.classList.remove("show");
+        hideVictory();
         removeUserDot();
         walk = newWalkState();
         if (currentRoute) walk.routeSig = routeSig(currentRoute);
@@ -2823,7 +3085,15 @@
         if (saved && saved.routeSig === sig && !viewingHistoryId) {
           walk = saved;
           if (walk.complete) {
-            congratsBanner.classList.add("show");
+            const gpsPts = (walk.gpsTrack || []).map(function (g) { return [g.lat, g.lon]; });
+            const dur = walk.startedAt ? Math.max(0, Date.now() - walk.startedAt) : 0;
+            showVictory({
+              durationMs: dur,
+              km: walk.kmWalked || walkedDistanceM(walk) / 1000,
+              shape: gpsPts.length >= 2 ? gpsPts : (route && route.shape),
+              photoId: walk.cherryPhotoId || null,
+              confetti: false
+            });
           } else {
             const last = walk.gpsTrack && walk.gpsTrack.length ? walk.gpsTrack[walk.gpsTrack.length - 1] : null;
             const pt = last ? [last.lat, last.lon] : (walkTrack ? pointAlongDistance(walkTrack, walk.progressM || 0) : START);
@@ -2925,7 +3195,7 @@
           resetAllAppData();
         });
       }
-      [modalReset, modalHist, modalHelp].forEach(function (dlg) {
+      [modalReset, modalHist, modalHelp, modalVictory].forEach(function (dlg) {
         if (!dlg) return;
         dlg.addEventListener("cancel", function (ev) {
           ev.preventDefault();
@@ -2938,6 +3208,19 @@
             else closeDialog(dlg);
           }
         });
+      });
+      document.getElementById("victory-close").addEventListener("click", function () { hideVictory(); });
+      document.getElementById("victory-new").addEventListener("click", async function () {
+        hideVictory();
+        const target = getTargetKm();
+        if (target < 1) {
+          setStatus("Ingresá una distancia de al menos 1 km.", true);
+          return;
+        }
+        savePrefs();
+        await abandonWalkIfNeeded();
+        resetProgressKeepRoute();
+        await generateAndShow(target, true);
       });
       btnReset.addEventListener("click", function () { openDialog(modalReset); });
       document.getElementById("reset-cancel").addEventListener("click", function () { closeDialog(modalReset); });
@@ -3552,6 +3835,16 @@
           })(),
           simMode: !!SIM_MODE,
           appVersion: APP_VERSION,
+          victoryOpen: !!(modalVictory && modalVictory.open && modalVictory.classList.contains("is-open")),
+          victoryTitle: (document.getElementById("victory-title") && document.getElementById("victory-title").textContent),
+          victoryTime: (document.getElementById("victory-time") && document.getElementById("victory-time").textContent),
+          victoryDist: (document.getElementById("victory-dist") && document.getElementById("victory-dist").textContent),
+          victoryHasMap: !!(document.querySelector("#victory-map svg")),
+          victoryHasPhoto: (function () {
+            const fig = document.getElementById("victory-photo");
+            return !!(fig && !fig.hidden && document.getElementById("victory-photo-img") && document.getElementById("victory-photo-img").getAttribute("src"));
+          })(),
+          simDurationS: 30,
           walkProgress: walk ? walk.progressM : 0,
           walkComplete: !!(walk && walk.complete),
           walkWatching: !!(walk && walk.watching),
