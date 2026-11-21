@@ -16,34 +16,65 @@
       --err: #8a2b1e;
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; }
+    html, body { margin: 0; height: 100%; overflow: hidden; }
     body {
       font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
       background: var(--bg);
       color: var(--ink);
-      display: flex;
-      flex-direction: column;
-    }
-    header {
-      padding: 16px 20px 14px;
-      background: var(--card);
-      border-bottom: 1px solid var(--line);
     }
     h1 {
-      margin: 0 0 4px;
-      font-size: 1.25rem;
+      margin: 0 0 2px;
+      font-size: 1.08rem;
       font-weight: 650;
+      line-height: 1.25;
     }
     .lead {
-      margin: 0 0 14px;
+      margin: 0 0 8px;
       color: var(--muted);
-      font-size: 0.92rem;
-      line-height: 1.4;
+      font-size: 0.8rem;
+      line-height: 1.35;
     }
+    #btn-panel {
+      position: fixed;
+      top: max(10px, env(safe-area-inset-top));
+      left: max(10px, env(safe-area-inset-left));
+      z-index: 30;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border-radius: 12px;
+      background: rgba(255, 252, 246, 0.84);
+      backdrop-filter: blur(14px) saturate(1.15);
+      -webkit-backdrop-filter: blur(14px) saturate(1.15);
+      color: var(--ink);
+      border: 1px solid rgba(216, 208, 195, 0.75);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+      font-size: 1.2rem;
+      line-height: 1;
+    }
+    #btn-panel:hover { filter: none; background: rgba(255, 252, 246, 0.95); }
+    #ui-panel {
+      display: none;
+      position: fixed;
+      top: calc(max(10px, env(safe-area-inset-top)) + 54px);
+      left: max(10px, env(safe-area-inset-left));
+      z-index: 29;
+      width: min(400px, calc(100vw - 72px));
+      max-height: min(70vh, calc(100dvh - 78px - env(safe-area-inset-bottom)));
+      overflow: auto;
+      padding: 12px 14px 14px;
+      border-radius: 16px;
+      background: rgba(255, 252, 246, 0.78);
+      backdrop-filter: blur(16px) saturate(1.2);
+      -webkit-backdrop-filter: blur(16px) saturate(1.2);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      box-shadow: 0 10px 32px rgba(0, 0, 0, 0.2);
+    }
+    body.panel-open #ui-panel { display: block; }
     form {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px 12px;
+      gap: 8px 10px;
       align-items: end;
     }
     label {
@@ -75,14 +106,28 @@
     button:hover { filter: brightness(1.06); }
     button:disabled { opacity: 0.6; cursor: default; filter: none; }
     #status {
-      margin-top: 12px;
-      font-size: 0.95rem;
-      min-height: 1.35em;
-      line-height: 1.45;
+      margin-top: 8px;
+      font-size: 0.88rem;
+      min-height: 1.2em;
+      line-height: 1.4;
     }
     #status.error { color: var(--err); }
     #status a { color: var(--accent); font-weight: 600; }
-    #map { flex: 1; min-height: 280px; background: #ddd; }
+    #map {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: #ddd;
+    }
+    .maplibregl-ctrl-top-right {
+      top: max(8px, env(safe-area-inset-top));
+      right: max(8px, env(safe-area-inset-right));
+    }
+    .maplibregl-ctrl-bottom-right {
+      bottom: max(8px, env(safe-area-inset-bottom));
+      right: max(8px, env(safe-area-inset-right));
+    }
     .maplibregl-popup-content { font-family: inherit; font-size: 0.9rem; }
     .pacman-marker, .fruit-marker {
       width: 34px;
@@ -100,13 +145,13 @@
     .actions {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 10px;
+      gap: 6px;
+      margin-top: 8px;
     }
     .actions button, .btn-secondary, .btn-ghost {
-      min-height: 48px;
-      padding: 10px 16px;
-      font-size: 1rem;
+      min-height: 44px;
+      padding: 8px 12px;
+      font-size: 0.95rem;
     }
     .btn-secondary {
       background: #1d3557;
@@ -195,16 +240,15 @@
     .stat-card strong { display: block; font-size: 1.25rem; }
     .hist-photo { max-width: 100%; border-radius: 8px; margin: 10px 0; }
     #foto-input { display: none; }
-    .ctrl-stack { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 210px; }
-    .ctrl-label { font-size: 0.8rem; color: var(--muted); }
-    .chip-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .ctrl-label { font-size: 0.75rem; color: var(--muted); margin-bottom: 4px; }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
     .chip {
-      background: #fff;
+      background: rgba(255,255,255,0.9);
       color: var(--ink);
       border: 1px solid var(--line);
       border-radius: 999px;
-      padding: 7px 12px;
-      min-height: 42px;
+      padding: 6px 11px;
+      min-height: 38px;
       font: inherit;
       font-weight: 600;
       cursor: pointer;
@@ -219,45 +263,41 @@
     #km-custom-wrap.show { display: flex; }
     #km-custom-wrap input { width: 5.6rem; }
     @media (max-width: 640px) {
-      header { padding: 10px 12px 10px; }
-      h1 { font-size: 1.02rem; line-height: 1.3; }
-      .lead { font-size: 0.85rem; margin-bottom: 8px; }
-      #status { margin-top: 8px; font-size: 0.9rem; }
-      #map { min-height: 220px; }
+      h1 { font-size: 0.98rem; }
+      .lead { margin-bottom: 6px; font-size: 0.75rem; }
+      #ui-panel {
+        width: calc(100vw - 20px - 54px);
+        max-height: min(46vh, calc(100dvh - 72px - env(safe-area-inset-bottom)));
+        padding: 10px 11px 11px;
+        border-radius: 14px;
+      }
+      .actions button, .btn-secondary, .btn-ghost {
+        min-height: 42px;
+        padding: 7px 10px;
+        font-size: 0.9rem;
+      }
+      #status { font-size: 0.82rem; margin-top: 6px; }
+      .chip { min-height: 36px; padding: 5px 10px; }
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Camine, señora, camine - Generador de rutas al azar en Bahía Blanca</h1>
+  <button type="button" id="btn-panel" aria-controls="ui-panel" aria-expanded="false" aria-label="Mostrar menú">☰</button>
+  <section id="ui-panel" aria-label="Menú">
+    <h1>Camine, señora, camine</h1>
     <p class="lead">Vueltas a pie desde el Teatro Municipal (Alsina 425).</p>
     <form id="form">
-      <div class="ctrl-stack">
-        <div>
-          <div class="ctrl-label" id="lbl-dist">Distancia</div>
-          <div class="chip-row" id="km-presets" role="group" aria-labelledby="lbl-dist">
-            <button type="button" class="chip" data-km="3" aria-pressed="false">3 km</button>
-            <button type="button" class="chip" data-km="5" aria-pressed="false">5 km</button>
-            <button type="button" class="chip" data-km="7" aria-pressed="true">7 km</button>
-            <button type="button" class="chip" data-km="custom" aria-pressed="false">Otra</button>
-            <label id="km-custom-wrap">
-              <input type="number" id="km" value="7" min="1" max="20" step="0.5" required>
-              <span>km</span>
-            </label>
-          </div>
-        </div>
-        <div>
-          <div class="ctrl-label" id="lbl-forma">Forma divertida</div>
-          <div class="chip-row" id="forma-presets" role="group" aria-labelledby="lbl-forma">
-            <button type="button" class="chip" data-forma="azar" aria-pressed="true">Al azar</button>
-            <button type="button" class="chip" data-forma="corazon" aria-pressed="false">Corazón</button>
-            <button type="button" class="chip" data-forma="persona" aria-pressed="false">Persona</button>
-            <button type="button" class="chip" data-forma="estrella" aria-pressed="false">Estrella</button>
-            <button type="button" class="chip" data-forma="fantasma" aria-pressed="false">Fantasma</button>
-            <button type="button" class="chip" data-forma="carita" aria-pressed="false">Carita</button>
-            <button type="button" class="chip" data-forma="flecha" aria-pressed="false">Flecha</button>
-            <button type="button" class="chip" data-forma="sorpresa" aria-pressed="false">Sorpresa</button>
-          </div>
+      <div>
+        <div class="ctrl-label" id="lbl-dist">Distancia</div>
+        <div class="chip-row" id="km-presets" role="group" aria-labelledby="lbl-dist">
+          <button type="button" class="chip" data-km="3" aria-pressed="false">3 km</button>
+          <button type="button" class="chip" data-km="5" aria-pressed="false">5 km</button>
+          <button type="button" class="chip" data-km="7" aria-pressed="true">7 km</button>
+          <button type="button" class="chip" data-km="custom" aria-pressed="false">Otra</button>
+          <label id="km-custom-wrap">
+            <input type="number" id="km" value="7" min="1" max="20" step="0.5" required>
+            <span>km</span>
+          </label>
         </div>
       </div>
       <button type="submit" id="btn">Sugerir ruta</button>
@@ -276,7 +316,7 @@
     </div>
     <div id="congrats-banner"></div>
     <input id="foto-input" type="file" accept="image/*" capture="environment">
-  </header>
+  </section>
   <div id="map"></div>
 
   <dialog class="modal" id="modal-reset">
@@ -398,16 +438,8 @@
       const statusEl = document.getElementById("status");
       let requestId = 0;
       const PREFS_KEY = "camine-senora-camine.prefs";
-      const FORMA_IDS = ["corazon", "persona", "estrella", "fantasma", "carita", "flecha"];
-      const FORMA_LABELS = {
-        corazon: "Corazón",
-        persona: "Persona",
-        estrella: "Estrella",
-        fantasma: "Fantasma",
-        carita: "Carita",
-        flecha: "Flecha"
-      };
-      let prefs = { preset: "7", km: 7, forma: "azar" };
+      const PANEL_KEY = "camine-senora-camine.panel";
+      let prefs = { preset: "7", km: 7 };
 
 
       const SIM_MODE = /(?:\?|&)sim=1(?:&|$)/.test(location.search);
@@ -707,7 +739,6 @@
           if (!data || typeof data !== "object") return;
           if (data.preset === "3" || data.preset === "5" || data.preset === "7" || data.preset === "custom") prefs.preset = data.preset;
           if (Number.isFinite(Number(data.km))) prefs.km = clampKm(data.km);
-          if (data.forma === "azar" || data.forma === "sorpresa" || FORMA_IDS.indexOf(data.forma) >= 0) prefs.forma = data.forma;
         } catch (err) {}
       }
 
@@ -729,14 +760,6 @@
         else kmInput.value = String(prefs.km);
       }
 
-      function syncFormaChips() {
-        const buttons = document.querySelectorAll("#forma-presets .chip");
-        for (let i = 0; i < buttons.length; i++) {
-          const id = buttons[i].getAttribute("data-forma");
-          buttons[i].setAttribute("aria-pressed", id === prefs.forma ? "true" : "false");
-        }
-      }
-
       function setKmPreset(preset, km) {
         if (preset === "3" || preset === "5" || preset === "7") {
           prefs.preset = preset;
@@ -751,18 +774,46 @@
         savePrefs();
       }
 
-      function setForma(id) {
-        if (id === "azar" || id === "sorpresa" || FORMA_IDS.indexOf(id) >= 0) prefs.forma = id;
-        syncFormaChips();
-        savePrefs();
+      function defaultPanelOpen() {
+        return window.matchMedia("(min-width: 641px)").matches;
+      }
+
+      function loadPanelOpen() {
+        try {
+          const v = localStorage.getItem(PANEL_KEY);
+          if (v === "open") return true;
+          if (v === "closed") return false;
+        } catch (err) {}
+        return defaultPanelOpen();
+      }
+
+      function setPanelOpen(open, persist) {
+        document.body.classList.toggle("panel-open", !!open);
+        const b = document.getElementById("btn-panel");
+        b.setAttribute("aria-expanded", open ? "true" : "false");
+        b.setAttribute("aria-label", open ? "Ocultar menú" : "Mostrar menú");
+        b.textContent = open ? "✕" : "☰";
+        if (persist !== false) {
+          try { localStorage.setItem(PANEL_KEY, open ? "open" : "closed"); } catch (err) {}
+        }
+        if (map && mapStyleReady) {
+          try { map.resize(); } catch (err) {}
+        }
+      }
+
+      function revealPanel() {
+        if (!document.body.classList.contains("panel-open")) setPanelOpen(true);
       }
 
       loadPrefs();
       if (prefs.preset !== "custom") prefs.km = Number(prefs.preset);
       kmInput.value = String(prefs.km);
       syncKmChips();
-      syncFormaChips();
+      setPanelOpen(loadPanelOpen(), false);
 
+      document.getElementById("btn-panel").addEventListener("click", function () {
+        setPanelOpen(!document.body.classList.contains("panel-open"));
+      });
       document.getElementById("km-presets").addEventListener("click", function (ev) {
         const chip = ev.target.closest(".chip");
         if (!chip) return;
@@ -772,11 +823,6 @@
       });
       kmInput.addEventListener("change", function () {
         setKmPreset("custom", clampKm(kmInput.value));
-      });
-      document.getElementById("forma-presets").addEventListener("click", function (ev) {
-        const chip = ev.target.closest(".chip");
-        if (!chip) return;
-        setForma(chip.getAttribute("data-forma"));
       });
 
       form.addEventListener("submit", async function (ev) {
@@ -832,8 +878,7 @@
       }
 
       function routeStatusHtml(route) {
-        const forma = route.formaLabel ? ("Forma: " + route.formaLabel + " · ") : "";
-        return forma + fmtKm(route.km) + " · unos " + (route.time || fmtTime(route.km)) +
+        return fmtKm(route.km) + " · unos " + (route.time || fmtTime(route.km)) +
           ' · <a href="' + route.maps + '" target="_blank" rel="noopener">Abrir en Google Maps</a>';
       }
 
@@ -865,9 +910,7 @@
       async function generateAndShow(target, fromUser) {
         const id = ++requestId;
         btn.disabled = true;
-        if (prefs.forma === "sorpresa") setStatus("Armando una forma sorpresa…");
-        else if (prefs.forma !== "azar" && FORMA_LABELS[prefs.forma]) setStatus("Armando la forma: " + FORMA_LABELS[prefs.forma] + "…");
-        else setStatus("Armando la ruta…");
+        setStatus("Armando la ruta…");
         try {
           if (fromUser) await abandonWalkIfNeeded();
           const result = await suggestLoop(target);
@@ -879,10 +922,7 @@
             time: fmtTime(result.km),
             fruit: randomFruitPoint(result.shape),
             pacmanDeg: routeBearing(result.shape) - 90,
-            maps: googleMapsUrl(result.waypoints),
-            formaId: result.formaId || null,
-            formaLabel: result.formaLabel || null,
-            idealShape: result.idealShape || null
+            maps: googleMapsUrl(result.waypoints)
           };
           applyRoute(route, fromUser);
           saveRoute(route);
@@ -928,41 +968,19 @@
         }
         rotatePacman(route.pacmanDeg);
         placeFruit(route.fruit);
-        drawIdealShape(route.idealShape);
         const bounds = new maplibregl.LngLatBounds();
         shape.forEach(function (p) { bounds.extend([p[1], p[0]]); });
-        if (isPointList(route.idealShape, 2)) {
-          route.idealShape.forEach(function (p) { bounds.extend([p[1], p[0]]); });
-        }
-        map.fitBounds(bounds, { padding: 48, duration: 700 });
+        map.fitBounds(bounds, { padding: fitPadding(), duration: 700 });
         if (mapStyleReady) ensureWalkLayers();
         if (!viewingHistoryId) bindWalkToRoute(route);
         startAnim(route);
       }
 
-      function drawIdealShape(pts) {
-        if (!mapStyleReady) return;
-        const geo = isPointList(pts, 2) ? lineFromLatLon(pts) : emptyLine();
-        const src = map.getSource("ideal-shape");
-        if (src) {
-          src.setData(geo);
-          return;
-        }
-        map.addSource("ideal-shape", { type: "geojson", data: geo });
-        const layer = {
-          id: "ideal-shape",
-          type: "line",
-          source: "ideal-shape",
-          layout: { "line-cap": "round", "line-join": "round" },
-          paint: {
-            "line-color": "#9a4f6c",
-            "line-width": 2.4,
-            "line-dasharray": [2.2, 2.2],
-            "line-opacity": 0.55
-          }
-        };
-        if (map.getLayer("route-casing")) map.addLayer(layer, "route-casing");
-        else map.addLayer(layer);
+      function fitPadding() {
+        const panel = document.getElementById("ui-panel");
+        const open = document.body.classList.contains("panel-open") && panel;
+        const top = open ? Math.min(panel.offsetHeight + 70, Math.max(120, window.innerHeight * 0.42)) : 56;
+        return { top: top, left: 16, right: 52, bottom: 36 };
       }
 
       function fmtKm(km) {
@@ -1362,6 +1380,7 @@
         if (nearFruit || passed) {
           walk.cherryPrompted = true;
           walkBanner.classList.add("show");
+          revealPanel();
           saveWalk();
           if (SIM_MODE && simTimer) {
             clearInterval(simTimer);
@@ -1517,6 +1536,7 @@
           fmtKm(km) + " recorridos en " + fmtDurationMs(dur) + ".";
         congratsBanner.classList.add("show");
         walkBanner.classList.remove("show");
+        revealPanel();
         try { await persistWalkRecord(true); } catch (err) {}
       }
 
@@ -1934,245 +1954,7 @@
         }
       }
 
-      function closeNorm(pts) {
-        const p = pts.map(function (q) { return [q[0], q[1]]; });
-        if (!p.length) return p;
-        const a = p[0], b = p[p.length - 1];
-        if (a[0] !== b[0] || a[1] !== b[1]) p.push([a[0], a[1]]);
-        return p;
-      }
-
-      function normLength(pts) {
-        let d = 0;
-        for (let i = 1; i < pts.length; i++) d += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
-        return d;
-      }
-
-      function densifyNorm(pts, minN, maxN) {
-        let p = pts.map(function (q) { return [q[0], q[1]]; });
-        if (p.length < 2) return p;
-        const a0 = p[0], a1 = p[p.length - 1];
-        if (a0[0] === a1[0] && a0[1] === a1[1]) p = p.slice(0, -1);
-        function longestEdge() {
-          let bestI = 0, bestD = -1;
-          for (let i = 0; i < p.length; i++) {
-            const b = p[(i + 1) % p.length];
-            const d = Math.hypot(b[0] - p[i][0], b[1] - p[i][1]);
-            if (d > bestD) { bestD = d; bestI = i; }
-          }
-          return bestI;
-        }
-        while (p.length < minN) {
-          const i = longestEdge();
-          const b = p[(i + 1) % p.length];
-          p.splice(i + 1, 0, [(p[i][0] + b[0]) / 2, (p[i][1] + b[1]) / 2]);
-        }
-        if (p.length > maxN) {
-          const closed = closeNorm(p);
-          const total = normLength(closed);
-          const out = [];
-          const step = total / maxN;
-          let acc = 0, i = 1, next = 0;
-          out.push([closed[0][0], closed[0][1]]);
-          for (let k = 1; k < maxN; k++) {
-            next = k * step;
-            while (i < closed.length && acc + Math.hypot(closed[i][0] - closed[i - 1][0], closed[i][1] - closed[i - 1][1]) < next) {
-              acc += Math.hypot(closed[i][0] - closed[i - 1][0], closed[i][1] - closed[i - 1][1]);
-              i++;
-            }
-            if (i >= closed.length) break;
-            const seg = Math.hypot(closed[i][0] - closed[i - 1][0], closed[i][1] - closed[i - 1][1]) || 1;
-            const t = (next - acc) / seg;
-            out.push([closed[i - 1][0] + (closed[i][0] - closed[i - 1][0]) * t, closed[i - 1][1] + (closed[i][1] - closed[i - 1][1]) * t]);
-          }
-          p = out;
-        }
-        return p;
-      }
-
-      function formaHeart() {
-        const pts = [];
-        const N = 16;
-        for (let i = 0; i < N; i++) {
-          const ang = Math.PI + (2 * Math.PI * i) / N;
-          const s = Math.sin(ang);
-          pts.push([
-            16 * s * s * s,
-            13 * Math.cos(ang) - 5 * Math.cos(2 * ang) - 2 * Math.cos(3 * ang) - Math.cos(4 * ang)
-          ]);
-        }
-        return pts;
-      }
-
-      function formaPersona() {
-        return [
-          [0.00, 0.00],
-          [-0.40, 0.00],
-          [-0.30, 0.55],
-          [-0.28, 0.84],
-          [-0.85, 0.35],
-          [-0.36, 0.95],
-          [-0.26, 1.22],
-          [-0.22, 1.48],
-          [0.00, 1.66],
-          [0.22, 1.48],
-          [0.26, 1.22],
-          [0.36, 0.95],
-          [0.85, 0.35],
-          [0.28, 0.84],
-          [0.30, 0.55],
-          [0.40, 0.00]
-        ];
-      }
-
-      function formaEstrella() {
-        const pts = [];
-        for (let i = 0; i < 10; i++) {
-          const ang = Math.PI / 2 + i * Math.PI / 5;
-          const rad = (i % 2 === 0) ? 1 : 0.38;
-          pts.push([Math.cos(ang) * rad, Math.sin(ang) * rad]);
-        }
-        let minI = 0;
-        for (let i = 1; i < pts.length; i++) {
-          if (pts[i][1] < pts[minI][1] || (pts[i][1] === pts[minI][1] && pts[i][0] < pts[minI][0])) minI = i;
-        }
-        return pts.slice(minI).concat(pts.slice(0, minI));
-      }
-
-      function formaFantasma() {
-        const pts = [
-          [0, 0],
-          [-0.33, 0.22],
-          [-0.67, 0],
-          [-1.00, 0.22],
-          [-1.00, 0.75]
-        ];
-        for (let i = 1; i <= 6; i++) {
-          const ang = Math.PI - i * (Math.PI / 7);
-          pts.push([Math.cos(ang), 0.75 + Math.sin(ang)]);
-        }
-        pts.push([1.00, 0.75], [1.00, 0.22], [0.67, 0], [0.33, 0.22]);
-        return pts;
-      }
-
-      function formaCarita() {
-        return [
-          [0.00, -1.00],
-          [-0.50, -0.86],
-          [-0.87, -0.50],
-          [-1.00, 0.00],
-          [-0.90, 0.45],
-          [-1.15, 0.72],
-          [-1.05, 1.08],
-          [-0.72, 1.00],
-          [-0.45, 1.05],
-          [0.00, 1.12],
-          [0.45, 1.05],
-          [0.72, 1.00],
-          [1.05, 1.08],
-          [1.15, 0.72],
-          [0.90, 0.45],
-          [1.00, 0.00],
-          [0.87, -0.50],
-          [0.50, -0.86]
-        ];
-      }
-
-      function formaFlecha() {
-        return [
-          [0.00, 0.00],
-          [-0.22, 0.00],
-          [-0.22, 1.05],
-          [-0.62, 1.05],
-          [0.00, 1.95],
-          [0.62, 1.05],
-          [0.22, 1.05],
-          [0.22, 0.00]
-        ];
-      }
-
-      const FORMA_FNS = {
-        corazon: formaHeart,
-        persona: formaPersona,
-        estrella: formaEstrella,
-        fantasma: formaFantasma,
-        carita: formaCarita,
-        flecha: formaFlecha
-      };
-
-      function formaRotation() {
-        if (typeof window.__formaRotation === "number" && Number.isFinite(window.__formaRotation)) {
-          return window.__formaRotation;
-        }
-        return (Math.random() - 0.5) * 0.5;
-      }
-
-      function placeShapeNorm(normPts, rotation, periKm) {
-        const raw = densifyNorm(normPts, 10, 18);
-        const origin = raw[0];
-        const local = raw.map(function (p) { return [p[0] - origin[0], p[1] - origin[1]]; });
-        const closed = closeNorm(local);
-        const L = normLength(closed) || 1;
-        const scale = (periKm * 1000) / L;
-        const cos = Math.cos(rotation), sin = Math.sin(rotation);
-        const mLat = 110540;
-        const mLon = 111320 * Math.cos(START[0] * Math.PI / 180);
-        return local.map(function (p) {
-          const x = p[0] * scale;
-          const y = p[1] * scale;
-          const xr = x * cos - y * sin;
-          const yr = x * sin + y * cos;
-          return [START[0] + yr / mLat, START[1] + xr / mLon];
-        });
-      }
-
-      function resolveFormaId() {
-        if (prefs.forma === "azar") return null;
-        if (prefs.forma === "sorpresa") return FORMA_IDS[Math.floor(Math.random() * FORMA_IDS.length)];
-        return prefs.forma;
-      }
-
-      async function suggestShapeLoop(targetKm, formaId) {
-        const fn = FORMA_FNS[formaId];
-        if (!fn) throw new Error("forma desconocida");
-        const norm = fn();
-        const label = FORMA_LABELS[formaId];
-        let lastError = null;
-        let best = null;
-        const baseRot = formaRotation();
-        const rots = [baseRot];
-        if (typeof window.__formaRotation !== "number") rots.push(baseRot + 0.4, baseRot - 0.4);
-        for (let r = 0; r < rots.length; r++) {
-          let scale = 0.82;
-          for (let i = 0; i < 5; i++) {
-            const placed = placeShapeNorm(norm, rots[r], targetKm * scale);
-            const waypoints = placed.slice(1);
-            const locations = [START].concat(waypoints, [START]);
-            let route;
-            try {
-              route = await routeWalking(locations);
-            } catch (err) {
-              lastError = err;
-              break;
-            }
-            route.waypoints = waypoints;
-            route.idealShape = placed.concat([placed[0]]);
-            route.formaId = formaId;
-            route.formaLabel = prefs.forma === "sorpresa" ? (label + " (sorpresa)") : label;
-            const ratio = route.km / targetKm;
-            if (!best || Math.abs(ratio - 1) < Math.abs(best.km / targetKm - 1)) best = route;
-            if (ratio >= 0.85 && ratio <= 1.15) return route;
-            scale *= targetKm / route.km;
-            scale = Math.max(0.4, Math.min(1.85, scale));
-          }
-        }
-        if (best && Math.abs(best.km / targetKm - 1) <= 0.2) return best;
-        throw lastError || new Error("sin ruta con forma");
-      }
-
       async function suggestLoop(targetKm) {
-        const formaId = resolveFormaId();
-        if (formaId) return suggestShapeLoop(targetKm, formaId);
         let lastError = null;
         for (let s = 0; s < 8; s++) {
           const pattern = randomPattern();
@@ -2200,17 +1982,21 @@
       }
 
       window.__camineTest = function () {
-        const src = mapStyleReady && map.getSource("ideal-shape");
+        const panel = document.getElementById("ui-panel");
+        const toggle = document.getElementById("btn-panel");
+        const cs = panel ? window.getComputedStyle(panel) : null;
         return {
           km: getTargetKm(),
           preset: prefs.preset,
-          forma: prefs.forma,
           routeKm: currentRoute && currentRoute.km,
-          formaId: currentRoute && currentRoute.formaId,
-          formaLabel: currentRoute && currentRoute.formaLabel,
           status: statusEl.innerText,
-          hasIdeal: !!(currentRoute && currentRoute.idealShape && currentRoute.idealShape.length >= 2),
-          title: document.title
+          title: document.title,
+          panelOpen: document.body.classList.contains("panel-open"),
+          panelVisible: !!(cs && cs.display !== "none" && cs.visibility !== "hidden"),
+          toggleLabel: toggle && toggle.getAttribute("aria-label"),
+          toggleText: toggle && toggle.textContent,
+          h1: document.querySelector("h1") && document.querySelector("h1").innerText,
+          hasFormaUI: !!document.getElementById("forma-presets")
         };
       };
     }
