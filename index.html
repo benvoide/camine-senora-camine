@@ -3,7 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Camine, señora, camine - Generador de rutas al azar en Bahía Blanca</title>
+  <title>Camine, señora, camine - Generador de rutas al azar en tu ciudad</title>
+  <meta name="description" content="Camine, señora, camine - Generador de rutas al azar en tu ciudad">
+  <meta name="apple-mobile-web-app-title" content="Camine, señora, camine">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Cpath%20fill%3D%22%23ffd100%22%20d%3D%22M16%2016%20L27.3%208.1%20A14%2014%200%201%200%2027.3%2023.9%20Z%22%2F%3E%3Ccircle%20cx%3D%2216.2%22%20cy%3D%2210%22%20r%3D%222.2%22%20fill%3D%22%23111111%22%2F%3E%3C%2Fsvg%3E">
+  <link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAADNUlEQVR42u3dUU7rMBCGUWJ1A2ZFLJ0VwRLKEw9QkCBNXPuf871egVT3dDop3LD13q9PUkjNEQhoCWgJaAloAS0BLQEtAS0BLaAloCWgJaAloAW0BLQEtAS0BLSAllbr4giO6e31/e7v8fzSHeSdbW5jMB4u6ECXAgw40PGI4QY6FjHcQEdDBrs46ETEcBcEXQlyVdgNZo/fhPZEmtZAgwy2lQNm51R3QoNsWjeYlXR+zZOhpHNceuUA2QoSM6Fhdr4xoGF2zjGgYXbeMaBhdu4xoGF2gRgDGmaYY0DDDHMMaJhhjgENM8wxoGGGOfqiUDAvC9p0hjkGNMwwx4CGGWY7tGD+1hS3060wnX/C88jHnfo/vy8wPw7O579Zt8ImdPW389Gwk+/L8dAdOnUy7QUzAlr6LcFcFHrXANp0Pg/NWejcrBFmLzKgwZkNYLX7Qw8HbTqbzCa0YAYaZqCtGzADraNfsHu/jz/rNhC06Wwym9AFp/Ser4cZaJMZaOvG2Y/3v18H821+ffRk1H9BZ80AOgK2TzOO7/Q/SeHTDTuzi0LBDDTMAhpmoO3PMJvQghlomAU0zEALZqAFcyXQPuGA2YSWgDadBTTMQAtmoAUz0DALaJgFNMxAa3d+2AQ01AIaaqAFNdCCGmhBDTTUAlpAH5cfIpjSJjTUDgFoqAU01EALaqAFdQ5on3RAbUILaqChFtBQA22PhtqEFtRAC+ppQVs7oDahBTXQUAM9KGsH1Ca0oJ4ZtCkNtQktqIFWVdTDQVs7oDahBfXMoE1pqOMmNNRQWzkE9cygTWmoTWhBPTNoU1pxExpqU9rKIahnBm1KQx03oaGGOm7lgBpqO7Sgnhm0KQ113ISGGuq4lQNqqON2aKihjrsohBrqKNBQQx0HGmrnHgcaaucdBxpq5xwHGmrn+1tb7/3qokUpg6J5EpR0js2ToaTzi1g5rCAgx01o09o5xU5o07ruCz4eNNi13rmaJ9PjN6FNa5CBhhtioMEGGehKuCEGenncEAO9NHCAgV4SOrhAS19yKzABLQEtAS0BLaAloCWgJaAloAW0BLQEtAS0BLSAloCWgJaAloBWjT4ATDaHTQrYyoIAAAAASUVORK5CYII=">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
@@ -95,9 +100,20 @@
       -webkit-backdrop-filter: blur(16px) saturate(1.1);
       border: 1px solid var(--hairline-soft);
       box-shadow: none;
+      opacity: 1;
+      transform: scale(1);
+      visibility: visible;
+      pointer-events: auto;
+      transition: opacity 200ms ease-out, transform 200ms ease-out, visibility 200ms ease-out, background-color 200ms ease-out;
     }
     #btn-panel:hover { filter: none; background: var(--canvas); }
-    body.panel-open #btn-panel { display: none; }
+    body.panel-open #btn-panel {
+      display: flex;
+      opacity: 0;
+      transform: scale(0.92);
+      visibility: hidden;
+      pointer-events: none;
+    }
     #btn-panel-close {
       position: absolute;
       top: 8px;
@@ -112,6 +128,7 @@
       border: 0;
       box-shadow: none;
       color: var(--ink);
+      transition: background-color 200ms ease-out, color 200ms ease-out, opacity 200ms ease-out;
     }
     #btn-panel-close:hover { filter: none; background: var(--soft-cloud); }
 
@@ -125,20 +142,22 @@
       max-height: min(72vh, calc(100dvh - 24px - env(safe-area-inset-bottom)));
       overflow: auto;
       padding: 16px 44px 16px 16px;
-      border-radius: var(--radius-lg);
+      border-radius: 0;
       background: var(--panel);
       backdrop-filter: blur(18px) saturate(1.1);
       -webkit-backdrop-filter: blur(18px) saturate(1.1);
       border: 1px solid var(--hairline-soft);
       box-shadow: none;
+      opacity: 0;
+      transform: translateY(-10px) scale(0.98);
+      pointer-events: none;
+      transition: opacity 200ms ease-out, transform 200ms ease-out;
     }
-    body.panel-open #ui-panel { display: block; }
-    @media (prefers-reduced-motion: no-preference) {
-      body.panel-open #ui-panel { animation: panel-in 0.16s ease-out; }
-      @keyframes panel-in {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
+    #ui-panel.is-mounted { display: block; }
+    #ui-panel.is-open {
+      opacity: 1;
+      transform: none;
+      pointer-events: auto;
     }
 
     form {
@@ -343,7 +362,7 @@
       display: none;
       margin-top: 12px;
       padding: 16px;
-      border-radius: var(--radius-md);
+      border-radius: 0;
       font-size: 16px;
       font-weight: 400;
       line-height: 1.5;
@@ -372,6 +391,7 @@
       box-shadow: none;
     }
     #btn-foto:hover { filter: none; background: #000; }
+    #btn-foto-skip { background: var(--soft-cloud); color: var(--ink); }
     body.walking #btn-reset {
       background: var(--canvas);
       box-shadow: inset 0 0 0 1px var(--ink);
@@ -388,7 +408,7 @@
 
     dialog.modal {
       border: 1px solid var(--hairline-soft);
-      border-radius: var(--radius-lg);
+      border-radius: 0;
       padding: 0;
       width: calc(100% - 24px);
       max-width: 520px;
@@ -396,8 +416,20 @@
       background: var(--canvas);
       color: var(--ink);
       box-shadow: none;
+      opacity: 0;
+      transform: translateY(10px) scale(0.98);
+      transition: opacity 200ms ease-out, transform 200ms ease-out;
     }
-    dialog.modal::backdrop { background: rgba(17, 17, 17, 0.45); }
+    dialog.modal.is-open {
+      opacity: 1;
+      transform: none;
+    }
+    dialog.modal::backdrop {
+      background: rgba(17, 17, 17, 0.45);
+      opacity: 0;
+      transition: opacity 200ms ease-out;
+    }
+    dialog.modal.is-open::backdrop { opacity: 1; }
     .modal-body { padding: 24px; overflow: auto; max-height: 88vh; }
     .modal-body h2 {
       margin: 0 0 16px;
@@ -514,8 +546,15 @@
       border-top: 1px solid var(--hairline);
       border-radius: 0;
       background: transparent;
+      opacity: 0;
+      transform: translateY(-8px) scale(0.98);
+      transition: opacity 200ms ease-out, transform 200ms ease-out;
     }
-    #loc-box.show { display: block; }
+    #loc-box.is-mounted { display: block; }
+    #loc-box.is-open {
+      opacity: 1;
+      transform: none;
+    }
     #loc-q {
       width: 100%;
       height: 40px;
@@ -599,7 +638,7 @@
         width: calc(100vw - 20px - 54px);
         max-height: min(64vh, calc(100dvh - 24px - env(safe-area-inset-bottom)));
         padding: 12px 40px 12px 12px;
-        border-radius: var(--radius-md);
+        border-radius: 0;
       }
       .actions { margin-top: 6px; gap: 6px; }
       #btn { min-height: 48px; font-size: 18px; padding: 12px 24px; }
@@ -655,9 +694,10 @@
     </div>
     <div id="status">Elegí la distancia y tocá Sugerir ruta.</div>
     <div id="walk-banner">
-      <div>¡Llegaste a las cerezas! Sacá una foto</div>
+      <div>¡Llegaste a las cerezas! ¿Querés sacar una foto?</div>
       <div class="modal-actions">
-        <button type="button" id="btn-foto">Sacá una foto</button>
+        <button type="button" id="btn-foto">Sacar foto</button>
+        <button type="button" id="btn-foto-skip" class="btn-ghost">Ahora no</button>
       </div>
     </div>
     <div id="congrats-banner"></div>
@@ -815,7 +855,8 @@
       const DB_NAME = "camine-senora-camine";
       const SNAP_MAX_M = 40;
       const SKIP_MAX_M = 120;
-      const FRUIT_PROX_M = 30;
+      const FRUIT_PROX_M = 50;
+      const FRUIT_LEAVE_M = 70;
       const GREEN_FALLBACK = [
         { name: "Plaza Rivadavia", lat: -38.717624, lon: -62.265541, kind: "park" },
         { name: "Parque de Mayo", lat: -38.696446, lon: -62.269177, kind: "park" },
@@ -1185,18 +1226,96 @@
         return defaultPanelOpen();
       }
 
+      function prefersReducedMotion() {
+        return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      }
+
+      function afterTransition(el, cb) {
+        if (!el || prefersReducedMotion()) { cb(); return; }
+        let done = false;
+        const finish = function (ev) {
+          if (ev && ev.target !== el) return;
+          if (done) return;
+          done = true;
+          el.removeEventListener("transitionend", finish);
+          clearTimeout(tid);
+          cb();
+        };
+        el.addEventListener("transitionend", finish);
+        const tid = setTimeout(finish, 280);
+      }
+
+      function playOpen(el) {
+        el.classList.add("is-mounted");
+        if (prefersReducedMotion()) {
+          el.classList.add("is-open");
+          return;
+        }
+        el.classList.remove("is-open");
+        void el.offsetWidth;
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { el.classList.add("is-open"); });
+        });
+      }
+
+      let panelInitDone = false;
       function setPanelOpen(open, persist) {
-        document.body.classList.toggle("panel-open", !!open);
+        const panel = document.getElementById("ui-panel");
         const eye = document.getElementById("btn-panel");
         const close = document.getElementById("btn-panel-close");
-        eye.setAttribute("aria-expanded", open ? "true" : "false");
-        close.setAttribute("aria-expanded", open ? "true" : "false");
+        const want = !!open;
+        eye.setAttribute("aria-expanded", want ? "true" : "false");
+        close.setAttribute("aria-expanded", want ? "true" : "false");
         if (persist !== false) {
-          try { localStorage.setItem(PANEL_KEY, open ? "open" : "closed"); } catch (err) {}
+          try { localStorage.setItem(PANEL_KEY, want ? "open" : "closed"); } catch (err) {}
+        }
+        const instant = !panelInitDone || prefersReducedMotion();
+        panelInitDone = true;
+        if (want) {
+          document.body.classList.add("panel-open");
+          if (instant) {
+            panel.classList.add("is-mounted");
+            panel.classList.add("is-open");
+          } else playOpen(panel);
+        } else {
+          document.body.classList.remove("panel-open");
+          panel.classList.remove("is-open");
+          const hide = function () {
+            if (document.body.classList.contains("panel-open")) return;
+            panel.classList.remove("is-mounted");
+            if (map && mapStyleReady) {
+              try { map.resize(); } catch (err) {}
+            }
+          };
+          if (instant) hide();
+          else afterTransition(panel, hide);
         }
         if (map && mapStyleReady) {
           try { map.resize(); } catch (err) {}
         }
+      }
+
+      function openDialog(dialog) {
+        if (!dialog) return;
+        if (typeof dialog.showModal === "function" && !dialog.open) dialog.showModal();
+        if (dialog.classList.contains("is-open")) return;
+        if (prefersReducedMotion()) {
+          dialog.classList.add("is-open");
+          return;
+        }
+        playOpen(dialog);
+      }
+
+      function closeDialog(dialog) {
+        if (!dialog) return;
+        if (!dialog.open && !dialog.classList.contains("is-open")) return;
+        dialog.classList.remove("is-open");
+        const hide = function () {
+          if (dialog.classList.contains("is-open")) return;
+          if (dialog.open) dialog.close();
+        };
+        if (prefersReducedMotion()) hide();
+        else afterTransition(dialog, hide);
       }
 
       function revealPanel() {
@@ -1242,10 +1361,21 @@
         if (open) {
           box.classList.add("show");
           revealPanel();
+          if (prefersReducedMotion()) {
+            box.classList.add("is-mounted");
+            box.classList.add("is-open");
+          } else playOpen(box);
           const q = document.getElementById("loc-q");
-          setTimeout(function () { try { q.focus(); } catch (err) {} }, 0);
+          setTimeout(function () { try { q.focus(); } catch (err) {} }, prefersReducedMotion() ? 0 : 180);
         } else {
           box.classList.remove("show");
+          box.classList.remove("is-open");
+          const hide = function () {
+            if (box.classList.contains("show")) return;
+            box.classList.remove("is-mounted");
+          };
+          if (prefersReducedMotion()) hide();
+          else afterTransition(box, hide);
         }
       }
 
@@ -1759,6 +1889,7 @@
           startedAt: null,
           gpsTrack: [],
           cherryPrompted: false,
+          cherryDismissed: false,
           cherryPhotoId: null,
           complete: false,
           watching: false,
@@ -1932,20 +2063,39 @@
         saveWalk();
       }
 
-      function maybeCherryPrompt(pt) {
-        if (!walk || walk.cherryPrompted || !currentRoute) return;
-        const nearFruit = distM(pt, currentRoute.fruit) <= FRUIT_PROX_M;
-        const passed = walk.progressM >= Math.max(0, fruitAlongM - 15);
-        if (nearFruit || passed) {
-          walk.cherryPrompted = true;
-          walkBanner.classList.add("show");
-          revealPanel();
-          saveWalk();
-          if (SIM_MODE && simTimer) {
-            clearInterval(simTimer);
-            simTimer = null;
-          }
+      function hideCherryBanner() {
+        walkBanner.classList.remove("show");
+      }
+
+      function showCherryBanner() {
+        if (walkBanner.classList.contains("show")) return;
+        walkBanner.classList.add("show");
+        revealPanel();
+      }
+
+      function updateCherryPrompt(pt) {
+        if (!walk || !currentRoute || walk.complete) return;
+        if (walk.cherryPhotoId || !currentRoute.fruit || !pt) {
+          hideCherryBanner();
+          return;
         }
+        const d = distM(pt, currentRoute.fruit);
+        if (d > FRUIT_LEAVE_M) {
+          walk.cherryDismissed = false;
+          hideCherryBanner();
+          return;
+        }
+        if (d <= FRUIT_PROX_M && !walk.cherryDismissed) {
+          walk.cherryPrompted = true;
+          showCherryBanner();
+          saveWalk();
+        } else if (d <= FRUIT_PROX_M && walk.cherryDismissed) {
+          hideCherryBanner();
+        }
+      }
+
+      function maybeCherryPrompt(pt) {
+        updateCherryPrompt(pt);
       }
 
       function maybeComplete(pt) {
@@ -1994,11 +2144,17 @@
         let last = Date.now();
         simTimer = setInterval(function () {
           if (!walk || walk.complete) { clearInterval(simTimer); simTimer = null; return; }
-          if (walkBanner.classList.contains("show")) { last = Date.now(); return; }
           const now = Date.now();
           const dt = Math.min(1, (now - last) / 1000);
           last = now;
-          const next = Math.min(total, walk.progressM + (total / durationS) * dt);
+          let speed = total / durationS;
+          if (currentRoute && currentRoute.fruit) {
+            const here = pointAlongDistance(walkTrack, walk.progressM);
+            if (distM(here, currentRoute.fruit) <= FRUIT_PROX_M) {
+              speed = Math.min(speed, (FRUIT_PROX_M * 2) / 2.5);
+            }
+          }
+          const next = Math.min(total, walk.progressM + speed * dt);
           const pt = pointAlongDistance(walkTrack, next);
           applyGpsFix(pt[0], pt[1], Date.now());
         }, 100);
@@ -2131,8 +2287,10 @@
           walk = saved;
           if (walk.complete) {
             congratsBanner.classList.add("show");
-          } else if (walk.cherryPrompted && !walk.cherryPhotoId) {
-            walkBanner.classList.add("show");
+          } else {
+            const last = walk.gpsTrack && walk.gpsTrack.length ? walk.gpsTrack[walk.gpsTrack.length - 1] : null;
+            const pt = last ? [last.lat, last.lon] : (walkTrack ? pointAlongDistance(walkTrack, walk.progressM || 0) : START);
+            updateCherryPrompt(pt);
           }
           btnWalk.textContent = (walk.progressM > 0 && !walk.complete) ? "Seguir caminata" : "Empezar caminata";
         } else if (!viewingHistoryId) {
@@ -2230,15 +2388,25 @@
           resetAllAppData();
         });
       }
-      btnReset.addEventListener("click", function () { modalReset.showModal(); });
-      document.getElementById("reset-cancel").addEventListener("click", function () { modalReset.close(); });
+      [modalReset, modalHist].forEach(function (dlg) {
+        if (!dlg) return;
+        dlg.addEventListener("cancel", function (ev) {
+          ev.preventDefault();
+          closeDialog(dlg);
+        });
+        dlg.addEventListener("click", function (ev) {
+          if (ev.target === dlg) closeDialog(dlg);
+        });
+      });
+      btnReset.addEventListener("click", function () { openDialog(modalReset); });
+      document.getElementById("reset-cancel").addEventListener("click", function () { closeDialog(modalReset); });
       document.getElementById("reset-same").addEventListener("click", async function () {
-        modalReset.close();
+        closeDialog(modalReset);
         await abandonWalkIfNeeded();
         resetProgressKeepRoute();
       });
       document.getElementById("reset-new").addEventListener("click", async function () {
-        modalReset.close();
+        closeDialog(modalReset);
         const target = getTargetKm();
         if (target < 1) {
           setStatus("Ingresá una distancia de al menos 1 km.", true);
@@ -2250,16 +2418,21 @@
         await generateAndShow(target, true);
       });
       btnHist.addEventListener("click", function () { openHistory("list"); });
-      document.getElementById("hist-close").addEventListener("click", function () { modalHist.close(); });
+      document.getElementById("hist-close").addEventListener("click", function () { closeDialog(modalHist); });
       document.getElementById("tab-walks").addEventListener("click", function () { showHistTab("walks"); });
       document.getElementById("tab-stats").addEventListener("click", function () { showHistTab("stats"); });
       document.getElementById("hist-back").addEventListener("click", function () { openHistory("list"); });
       document.getElementById("hist-current").addEventListener("click", function () {
-        modalHist.close();
+        closeDialog(modalHist);
         viewingHistoryId = null;
         if (currentRoute) applyRoute(currentRoute, false);
       });
       document.getElementById("btn-foto").addEventListener("click", function () { fotoInput.click(); });
+      document.getElementById("btn-foto-skip").addEventListener("click", function () {
+        if (walk) walk.cherryDismissed = true;
+        hideCherryBanner();
+        saveWalk();
+      });
       fotoInput.addEventListener("change", function () {
         const f = fotoInput.files && fotoInput.files[0];
         fotoInput.value = "";
@@ -2277,7 +2450,7 @@
       }
 
       async function openHistory(mode) {
-        modalHist.showModal();
+        openDialog(modalHist);
         if (mode === "stats") showHistTab("stats");
         else {
           showHistTab("walks");
@@ -2351,7 +2524,7 @@
           } catch (err) {}
         }
         document.getElementById("hist-showmap").addEventListener("click", function () {
-          modalHist.close();
+          closeDialog(modalHist);
           showHistoricalOnMap(w);
         });
         document.getElementById("hist-del").addEventListener("click", async function () {
@@ -2751,6 +2924,32 @@
         });
       };
 
+      window.__atCherries = function () {
+        if (!walk || !currentRoute || !currentRoute.fruit) return false;
+        applyGpsFix(currentRoute.fruit[0], currentRoute.fruit[1], Date.now());
+        return walkBanner.classList.contains("show");
+      };
+      window.__skipCherryPhoto = function () {
+        const b = document.getElementById("btn-foto-skip");
+        if (b) b.click();
+        return !(walkBanner.classList.contains("show"));
+      };
+      window.__takeCherryPhoto = function () {
+        return new Promise(function (resolve, reject) {
+          const canvas = document.createElement("canvas");
+          canvas.width = 64;
+          canvas.height = 64;
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#e31b23";
+          ctx.fillRect(0, 0, 64, 64);
+          canvas.toBlob(function (blob) {
+            if (!blob) { reject(new Error("blob")); return; }
+            handlePhoto(new File([blob], "cerezas.jpg", { type: "image/jpeg" })).then(function () {
+              resolve(!!(walk && walk.cherryPhotoId));
+            }).catch(reject);
+          }, "image/jpeg", 0.8);
+        });
+      };
       window.__camineTest = function () {
         const panel = document.getElementById("ui-panel");
         const eye = document.getElementById("btn-panel");
@@ -2765,9 +2964,9 @@
           status: statusEl.innerText,
           title: document.title,
           panelOpen: document.body.classList.contains("panel-open"),
-          panelVisible: !!(cs && cs.display !== "none" && cs.visibility !== "hidden"),
-          eyeVisible: !!(eyeCs && eyeCs.display !== "none" && eyeCs.visibility !== "hidden"),
-          closeVisible: !!(closeCs && closeCs.display !== "none" && closeCs.visibility !== "hidden" && cs && cs.display !== "none"),
+          panelVisible: !!(cs && cs.display !== "none" && cs.visibility !== "hidden" && cs.opacity !== "0"),
+          eyeVisible: !!(eyeCs && eyeCs.display !== "none" && eyeCs.visibility !== "hidden" && eyeCs.opacity !== "0"),
+          closeVisible: !!(closeCs && closeCs.display !== "none" && closeCs.visibility !== "hidden" && cs && cs.display !== "none" && cs.opacity !== "0"),
           eyeLabel: eye && eye.getAttribute("aria-label"),
           eyeTitle: eye && eye.getAttribute("title"),
           closeLabel: close && close.getAttribute("aria-label"),
@@ -2782,6 +2981,14 @@
           start: [START[0], START[1]],
           locBox: document.getElementById("loc-box").classList.contains("show"),
           locBtn: !!(document.getElementById("btn-loc")),
+          cherryBanner: walkBanner.classList.contains("show"),
+          cherryPhoto: !!(walk && walk.cherryPhotoId),
+          cherryDismissed: !!(walk && walk.cherryDismissed),
+          complete: !!(walk && walk.complete),
+          watching: !!(walk && walk.watching),
+          hasFotoSkip: !!document.getElementById("btn-foto-skip"),
+          fotoLabel: (document.getElementById("btn-foto") && document.getElementById("btn-foto").textContent),
+          skipLabel: (document.getElementById("btn-foto-skip") && document.getElementById("btn-foto-skip").textContent),
           originFlag: (function () {
             const el = document.querySelector(".origin-flag");
             if (!el) return null;
