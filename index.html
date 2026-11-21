@@ -281,6 +281,35 @@
     #km-custom-wrap { display: none; align-items: center; gap: 6px; }
     #km-custom-wrap.show { display: flex; }
     #km-custom-wrap input { width: 5.6rem; }
+    #loc-box { display: none; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+    #loc-box.show { display: block; }
+    #loc-q {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      font: inherit;
+      background: #fff;
+      color: var(--ink);
+    }
+    #loc-results { margin-top: 6px; max-height: 28vh; overflow: auto; }
+    #loc-results button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: #fff;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      margin: 0 0 4px;
+      font-weight: 500;
+      font-size: 0.82rem;
+      line-height: 1.3;
+      padding: 8px 10px;
+      min-height: 0;
+    }
+    #loc-results button:hover { filter: none; background: #fff8ea; }
+    .loc-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .loc-actions button { min-height: 40px; font-size: 0.85rem; padding: 7px 10px; }
     @media (max-width: 640px) {
       h1 { font-size: 0.98rem; }
       .lead { margin-bottom: 6px; font-size: 0.75rem; }
@@ -305,7 +334,7 @@
   <section id="ui-panel" aria-label="Menú">
     <button type="button" id="btn-panel-close" aria-controls="ui-panel" aria-expanded="false" aria-label="Ocultar menú" title="Ocultar menú"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     <h1>Camine, señora, camine</h1>
-    <p class="lead">Vueltas a pie desde el Teatro Municipal (Alsina 425).</p>
+    <p class="lead" id="origin-label">Vueltas a pie desde: Teatro Municipal (Alsina 425).</p>
     <form id="form">
       <div>
         <div class="ctrl-label" id="lbl-dist">Distancia</div>
@@ -326,6 +355,17 @@
       <button type="button" id="btn-walk" class="btn-secondary">Empezar caminata</button>
       <button type="button" id="btn-reset" class="btn-ghost">Reiniciar / editar</button>
       <button type="button" id="btn-hist" class="btn-ghost">Historial</button>
+      <button type="button" id="btn-loc" class="btn-ghost">Cambiar de locación</button>
+    </div>
+    <div id="loc-box">
+      <div class="ctrl-label">Buscar ciudad, lugar o dirección</div>
+      <input type="search" id="loc-q" placeholder="Ej. Obelisco, Buenos Aires" autocomplete="off">
+      <div id="loc-results"></div>
+      <div class="loc-actions">
+        <button type="button" id="loc-geo" class="btn-secondary">Usar mi ubicación actual</button>
+        <button type="button" id="loc-bb">Volver a Bahía Blanca</button>
+        <button type="button" id="loc-cancel" class="btn-ghost">Cerrar</button>
+      </div>
     </div>
     <div id="status">Elegí la distancia y tocá Sugerir ruta.</div>
     <div id="walk-banner">
@@ -420,7 +460,12 @@
     }
 
     function initApp() {
-      const START = [-38.714775, -62.260133];
+      const TEATRO = [-38.714775, -62.260133];
+      const TEATRO_NAME = "Teatro Municipal (Alsina 425)";
+      const BB_RADIUS_M = 12000;
+      let START = [TEATRO[0], TEATRO[1]];
+      let originName = TEATRO_NAME;
+      let originIsBB = true;
       const VALHALLA_URL = "https://valhalla1.openstreetmap.de/route";
       const OSRM_URL = "https://routing.openstreetmap.de/routed-foot/route/v1/foot";
       const OFM_STYLE = "https://tiles.openfreemap.org/styles/liberty";
@@ -491,10 +536,34 @@
         { name: "Paseo de las Esculturas", lat: -38.707453, lon: -62.257518, kind: "park" },
         { name: "Paseo de las Esculturas (Napostá)", lat: -38.705876, lon: -62.260516, kind: "park" },
         { name: "Parque Independencia", lat: -38.718016, lon: -62.240824, kind: "park" },
+        { name: "Plaza del Sol", lat: -38.71850, lon: -62.23920, kind: "park" },
         { name: "Plaza Almirante Brown", lat: -38.727088, lon: -62.257485, kind: "park" },
         { name: "Plaza Bartolomé Mitre", lat: -38.729062, lon: -62.245913, kind: "park" },
-        { name: "Plaza 1 de Mayo", lat: -38.719646, lon: -62.305016, kind: "park" }
+        { name: "Plaza 1 de Mayo", lat: -38.719646, lon: -62.305016, kind: "park" },
+        { name: "Plaza España", lat: -38.73362, lon: -62.27705, kind: "park" },
+        { name: "Plaza Italia", lat: -38.69930, lon: -62.29239, kind: "park" },
+        { name: "Plaza Inmigrantes Croatas", lat: -38.70754, lon: -62.29219, kind: "park" },
+        { name: "Plaza Nicolás Levalle", lat: -38.72143, lon: -62.26747, kind: "park" },
+        { name: "Plaza Eva Perón", lat: -38.70820, lon: -62.25353, kind: "park" }
       ];
+      const MAYO_PTS = [
+        [-38.696446, -62.269177],
+        [-38.701153, -62.271225],
+        [-38.699365, -62.270446]
+      ];
+      const N_SECTORS = 8;
+      const SECTOR_NAMES = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+      const SECTORS_KEY = "camine-senora-camine.sectors";
+      const SECTOR_PREFERRED = {
+        0: ["Parque de Mayo"],
+        1: ["Plaza Eva Perón", "Paseo de las Esculturas"],
+        2: ["Parque Independencia", "Plaza del Sol"],
+        3: ["Plaza Bartolomé Mitre"],
+        4: ["Plaza Almirante Brown"],
+        5: ["Plaza España", "Plaza Nicolás Levalle", "Plaza Rivadavia"],
+        6: ["Plaza Inmigrantes Croatas", "Plaza 1 de Mayo", "Plaza Italia"],
+        7: ["Parque de Mayo", "Plaza Italia", "Plaza Inmigrantes Croatas"]
+      };
       let greensList = null;
       let greensReady = null;
       let walk = null;
@@ -736,9 +805,11 @@
       function placeMarker() {
         stopAnim();
         if (startMarker) startMarker.remove();
+        const pt = (currentRoute && currentRoute.shape && currentRoute.shape[0]) || START;
+        const label = (currentRoute && currentRoute.originName) || originName;
         startMarker = new maplibregl.Marker({ element: pacmanEl(), anchor: "center" })
-          .setLngLat([START[1], START[0]])
-          .setPopup(new maplibregl.Popup({ offset: 20 }).setText("Teatro Municipal"))
+          .setLngLat([pt[1], pt[0]])
+          .setPopup(new maplibregl.Popup({ offset: 20 }).setText(label))
           .addTo(map);
         if (currentRoute) rotatePacman(currentRoute.pacmanDeg);
       }
@@ -848,6 +919,123 @@
         setKmPreset("custom", clampKm(kmInput.value));
       });
 
+      function escapeHtml(s) {
+        return String(s || "").replace(/[&<>"']/g, function (c) {
+          return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c];
+        });
+      }
+
+      function updateOriginLabel() {
+        const el = document.getElementById("origin-label");
+        if (el) el.textContent = "Vueltas a pie desde: " + originName;
+      }
+
+      function setLocBoxOpen(open) {
+        const box = document.getElementById("loc-box");
+        if (open) {
+          box.classList.add("show");
+          revealPanel();
+          const q = document.getElementById("loc-q");
+          setTimeout(function () { try { q.focus(); } catch (err) {} }, 0);
+        } else {
+          box.classList.remove("show");
+        }
+      }
+
+      async function changeOrigin(lat, lon, name) {
+        START = [lat, lon];
+        originName = name || (lat.toFixed(5) + ", " + lon.toFixed(5));
+        originIsBB = distM(START, TEATRO) <= BB_RADIUS_M;
+        updateOriginLabel();
+        try { localStorage.removeItem(SECTORS_KEY); } catch (err) {}
+        greensReady = null;
+        greensList = originIsBB ? GREEN_FALLBACK : [];
+        ensureGreens();
+        if (map) {
+          map.setCenter([lon, lat]);
+          map.setZoom(14);
+        }
+        currentRoute = null;
+        placeMarker();
+        setLocBoxOpen(false);
+        await abandonWalkIfNeeded();
+        resetProgressKeepRoute();
+        await generateAndShow(getTargetKm(), true);
+      }
+
+      document.getElementById("btn-loc").addEventListener("click", function () {
+        const box = document.getElementById("loc-box");
+        setLocBoxOpen(!box.classList.contains("show"));
+      });
+      document.getElementById("loc-cancel").addEventListener("click", function () {
+        setLocBoxOpen(false);
+      });
+      document.getElementById("loc-bb").addEventListener("click", function () {
+        changeOrigin(TEATRO[0], TEATRO[1], TEATRO_NAME);
+      });
+      document.getElementById("loc-geo").addEventListener("click", function () {
+        if (!navigator.geolocation) {
+          setStatus("Este dispositivo no ofrece geolocalización.", true);
+          return;
+        }
+        setStatus("Buscando tu ubicación…");
+        navigator.geolocation.getCurrentPosition(function (pos) {
+          const lat = pos.coords.latitude, lon = pos.coords.longitude;
+          fetch("https://nominatim.openstreetmap.org/reverse?format=json&accept-language=es&lat=" + lat + "&lon=" + lon)
+            .then(function (res) { return res.ok ? res.json() : null; })
+            .then(function (data) {
+              let name = originName;
+              if (data) {
+                name = data.name || (data.address && (data.address.road || data.address.suburb || data.address.city || data.address.town)) || data.display_name || (lat.toFixed(5) + ", " + lon.toFixed(5));
+                if (name && name.length > 80) name = name.slice(0, 77) + "…";
+              } else name = lat.toFixed(5) + ", " + lon.toFixed(5);
+              return changeOrigin(lat, lon, name);
+            })
+            .catch(function () { return changeOrigin(lat, lon, lat.toFixed(5) + ", " + lon.toFixed(5)); });
+        }, function () {
+          setStatus("No pude obtener tu ubicación. Revisá los permisos.", true);
+        }, { enableHighAccuracy: true, timeout: 12000 });
+      });
+
+      let locTimer = 0;
+      let locReq = 0;
+      document.getElementById("loc-q").addEventListener("input", function () {
+        const q = document.getElementById("loc-q").value.trim();
+        const box = document.getElementById("loc-results");
+        clearTimeout(locTimer);
+        if (q.length < 3) { box.innerHTML = ""; return; }
+        locTimer = setTimeout(function () {
+          const id = ++locReq;
+          const url = "https://nominatim.openstreetmap.org/search?format=json&limit=5&accept-language=es&q=" + encodeURIComponent(q);
+          box.innerHTML = "<p class='hist-meta'>Buscando…</p>";
+          fetch(url, { headers: { "Accept": "application/json" } })
+            .then(function (res) { return res.ok ? res.json() : []; })
+            .then(function (list) {
+              if (id !== locReq) return;
+              if (!list || !list.length) {
+                box.innerHTML = "<p class='hist-meta'>No encontré ese lugar. Probá con otra búsqueda.</p>";
+                return;
+              }
+              box.innerHTML = "";
+              list.slice(0, 5).forEach(function (item) {
+                const btn = document.createElement("button");
+                btn.type = "button";
+                const label = item.display_name || item.name || (item.lat + ", " + item.lon);
+                btn.innerHTML = escapeHtml(label);
+                btn.addEventListener("click", function () {
+                  const name = item.name || (label.length > 80 ? label.slice(0, 77) + "…" : label);
+                  changeOrigin(Number(item.lat), Number(item.lon), name);
+                });
+                box.appendChild(btn);
+              });
+            })
+            .catch(function () {
+              if (id !== locReq) return;
+              box.innerHTML = "<p class='hist-meta'>No pude buscar el lugar. Revisá la conexión.</p>";
+            });
+        }, 400);
+      });
+
       form.addEventListener("submit", async function (ev) {
         ev.preventDefault();
         const target = getTargetKm();
@@ -883,12 +1071,19 @@
         return true;
       }
 
+      function routeStartsAtTeatro(data) {
+        const pt = (data && data.origin && isPoint(data.origin)) ? data.origin
+          : (data && data.shape && isPoint(data.shape[0]) ? data.shape[0] : null);
+        return pt && distM(pt, TEATRO) <= 200;
+      }
+
       function loadSavedRoute() {
         try {
           const raw = localStorage.getItem(STORAGE_KEY);
           if (!raw) return null;
           const data = JSON.parse(raw);
-          return validRoute(data) ? data : null;
+          if (!validRoute(data) || !routeStartsAtTeatro(data)) return null;
+          return data;
         } catch (err) {
           return null;
         }
@@ -945,7 +1140,9 @@
             time: fmtTime(result.km),
             fruit: randomFruitPoint(result.shape),
             pacmanDeg: routeBearing(result.shape) - 90,
-            maps: googleMapsUrl(result.waypoints)
+            maps: googleMapsUrl(result.waypoints),
+            origin: [START[0], START[1]],
+            originName: originName
           };
           applyRoute(route, fromUser);
           saveRoute(route);
@@ -1076,65 +1273,98 @@
         return a;
       }
 
+      function mergeGreens(base, extra) {
+        const out = (base || []).slice();
+        const seen = {};
+        out.forEach(function (g) {
+          if (g && Number.isFinite(g.lat) && Number.isFinite(g.lon)) {
+            seen[g.lat.toFixed(4) + "," + g.lon.toFixed(4)] = 1;
+          }
+        });
+        (extra || []).forEach(function (g) {
+          if (!g || !Number.isFinite(g.lat) || !Number.isFinite(g.lon)) return;
+          const key = g.lat.toFixed(4) + "," + g.lon.toFixed(4);
+          if (seen[key]) return;
+          seen[key] = 1;
+          out.push(g);
+        });
+        return out;
+      }
+
+      function overpassQueryFor(lat, lon) {
+        const around = "around:4000," + lat.toFixed(6) + "," + lon.toFixed(6);
+        return '[out:json][timeout:25];(' +
+          'way["leisure"~"^(park|garden|playground)$"](' + around + ');' +
+          'relation["leisure"~"^(park|garden)$"](' + around + ');' +
+          'way["landuse"~"^(grass|recreation_ground)$"](' + around + ');' +
+          'node["place"="square"](' + around + ');' +
+          'way["place"="square"](' + around + ');' +
+          'node["leisure"~"^(park|garden)$"](' + around + ');' +
+          ');out center tags;';
+      }
+
+      async function fetchOverpassGreens(lat, lon) {
+        const query = overpassQueryFor(lat, lon);
+        const endpoints = [
+          "https://overpass-api.de/api/interpreter",
+          "https://overpass.kumi.systems/api/interpreter"
+        ];
+        for (let e = 0; e < endpoints.length; e++) {
+          try {
+            const ctl = new AbortController();
+            const to = setTimeout(function () { ctl.abort(); }, 12000);
+            const res = await fetch(endpoints[e], {
+              method: "POST",
+              body: "data=" + encodeURIComponent(query),
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              signal: ctl.signal
+            });
+            clearTimeout(to);
+            if (!res.ok) continue;
+            const data = await res.json();
+            const seen = {};
+            const list = [];
+            (data.elements || []).forEach(function (el) {
+              const tags = el.tags || {};
+              const plat = el.lat || (el.center && el.center.lat);
+              const plon = el.lon || (el.center && el.center.lon);
+              if (!Number.isFinite(plat) || !Number.isFinite(plon)) return;
+              const key = plat.toFixed(4) + "," + plon.toFixed(4);
+              if (seen[key]) return;
+              seen[key] = 1;
+              list.push({
+                name: tags.name || tags["name:es"] || "Espacio verde",
+                lat: plat,
+                lon: plon,
+                kind: tags.leisure || tags.place || tags.landuse || "park"
+              });
+            });
+            if (list.length >= 5) return list;
+          } catch (err) {}
+        }
+        return [];
+      }
+
       async function ensureGreens() {
-        if (greensList) return greensList;
         if (greensReady) return greensReady;
         greensReady = (async function () {
+          if (!originIsBB) {
+            const list = await fetchOverpassGreens(START[0], START[1]);
+            greensList = list;
+            return greensList;
+          }
           try {
             const cached = JSON.parse(localStorage.getItem(GREENS_KEY) || "null");
             if (cached && Array.isArray(cached.greens) && cached.greens.length && (Date.now() - cached.ts) < 7 * 24 * 3600 * 1000) {
-              greensList = cached.greens;
+              greensList = mergeGreens(GREEN_FALLBACK, cached.greens);
               return greensList;
             }
           } catch (err) {}
-          const query = '[out:json][timeout:25];(' +
-            'way["leisure"~"^(park|garden|playground)$"](around:4000,-38.714775,-62.260133);' +
-            'relation["leisure"~"^(park|garden)$"](around:4000,-38.714775,-62.260133);' +
-            'way["landuse"~"^(grass|recreation_ground)$"](around:4000,-38.714775,-62.260133);' +
-            'node["place"="square"](around:4000,-38.714775,-62.260133);' +
-            'way["place"="square"](around:4000,-38.714775,-62.260133);' +
-            'node["leisure"~"^(park|garden)$"](around:4000,-38.714775,-62.260133);' +
-            ');out center tags;';
-          const endpoints = [
-            "https://overpass-api.de/api/interpreter",
-            "https://overpass.kumi.systems/api/interpreter"
-          ];
-          for (let e = 0; e < endpoints.length; e++) {
-            try {
-              const ctl = new AbortController();
-              const to = setTimeout(function () { ctl.abort(); }, 12000);
-              const res = await fetch(endpoints[e], {
-                method: "POST",
-                body: "data=" + encodeURIComponent(query),
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                signal: ctl.signal
-              });
-              clearTimeout(to);
-              if (!res.ok) continue;
-              const data = await res.json();
-              const seen = {};
-              const list = [];
-              (data.elements || []).forEach(function (el) {
-                const tags = el.tags || {};
-                const lat = el.lat || (el.center && el.center.lat);
-                const lon = el.lon || (el.center && el.center.lon);
-                if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
-                const key = lat.toFixed(4) + "," + lon.toFixed(4);
-                if (seen[key]) return;
-                seen[key] = 1;
-                list.push({
-                  name: tags.name || tags["name:es"] || "Espacio verde",
-                  lat: lat,
-                  lon: lon,
-                  kind: tags.leisure || tags.place || tags.landuse || "park"
-                });
-              });
-              if (list.length >= 5) {
-                greensList = list;
-                try { localStorage.setItem(GREENS_KEY, JSON.stringify({ ts: Date.now(), greens: list })); } catch (err) {}
-                return greensList;
-              }
-            } catch (err) {}
+          const list = await fetchOverpassGreens(TEATRO[0], TEATRO[1]);
+          if (list.length >= 5) {
+            greensList = mergeGreens(GREEN_FALLBACK, list);
+            try { localStorage.setItem(GREENS_KEY, JSON.stringify({ ts: Date.now(), greens: greensList })); } catch (err) {}
+            return greensList;
           }
           greensList = GREEN_FALLBACK;
           return greensList;
@@ -1143,7 +1373,7 @@
       }
 
       function pickGreenInSector(ang, minKm, maxKm, greens, used) {
-        const half = 0.7;
+        const half = 0.85;
         const cand = [];
         for (let i = 0; i < greens.length; i++) {
           const g = greens[i];
@@ -1540,7 +1770,9 @@
           maps: currentRoute.maps,
           formaId: currentRoute.formaId || null,
           formaLabel: currentRoute.formaLabel || null,
-          idealShape: currentRoute.idealShape || null
+          idealShape: currentRoute.idealShape || null,
+          origin: currentRoute.origin || [START[0], START[1]],
+          originName: currentRoute.originName || originName
         };
         try { await idbPut("walks", rec); } catch (err) {}
         return rec;
@@ -1724,7 +1956,8 @@
           const km = (w.kmWalked || 0).toLocaleString("es-AR", { maximumFractionDigits: 2 });
           const badge = w.complete ? "<span class='badge ok'>Completa</span>" : "<span class='badge no'>Incompleta</span>";
           item.innerHTML = "<div><div><strong>" + dateLabel(w.createdAt || w.endedAt) + "</strong> " + badge +
-            "</div><div class='hist-meta'>" + km + " km · " + fmtDurationMs(w.durationMs) + "</div></div>";
+            "</div><div class='hist-meta'>" + km + " km · " + fmtDurationMs(w.durationMs) +
+            (w.originName ? " · " + escapeHtml(w.originName) : "") + "</div></div>";
           if (w.photoId) {
             try {
               const ph = await idbGet("photos", w.photoId);
@@ -1754,7 +1987,8 @@
         const badge = w.complete ? "<span class='badge ok'>Completa</span>" : "<span class='badge no'>Incompleta</span>";
         box.innerHTML = "<div><strong>" + dateLabel(w.createdAt || w.endedAt) + "</strong> " + badge +
           "</div><div class='hist-meta'>" + km + " km caminados · " + fmtDurationMs(w.durationMs) +
-          (w.kmPlanned ? " · ruta de " + fmtKm(w.kmPlanned) : "") + "</div>" +
+          (w.kmPlanned ? " · ruta de " + fmtKm(w.kmPlanned) : "") +
+          (w.originName ? " · " + escapeHtml(w.originName) : "") + "</div>" +
           "<div class='modal-actions'><button type='button' id='hist-showmap'>Ver en el mapa</button>" +
           "<button type='button' id='hist-del' class='btn-ghost'>Borrar</button></div>";
         if (w.photoId) {
@@ -1899,36 +2133,147 @@
           "<h3 style='font-size:1rem;margin:14px 0 6px'>Por mes</h3>" + months;
       }
 
-      function randomPattern() {
-        const n = 3 + Math.floor(Math.random() * 3);
-        const bearing0 = Math.random() * Math.PI * 2;
-        const snapN = Math.min(3, Math.max(2, n - 1));
-        const order = [];
-        for (let i = 0; i < n; i++) order.push(i);
-        const snapIdx = {};
-        shuffle(order).slice(0, snapN).forEach(function (i) { snapIdx[i] = true; });
-        const pts = [];
-        for (let i = 0; i < n; i++) {
-          pts.push({
-            ang: bearing0 + (Math.PI * 2 * i) / n + (Math.random() - 0.5) * 0.25,
-            radFrac: 0.88 + Math.random() * 0.24,
-            wantGreen: !!snapIdx[i]
-          });
-        }
-        return { bearing0: bearing0, pts: pts };
+      function bearingToSector(brgDeg) {
+        return Math.floor((((brgDeg % 360) + 360 + 22.5) % 360) / 45);
       }
 
-      function applyPattern(pattern, targetKm, scale) {
-        const baseR = (targetKm / (Math.PI * 2)) * 0.95 * scale;
+      function sectorDiff(a, b) {
+        const d = Math.abs(a - b) % N_SECTORS;
+        return Math.min(d, N_SECTORS - d);
+      }
+
+      function loadRecentSectors() {
+        try {
+          const arr = JSON.parse(localStorage.getItem(SECTORS_KEY) || "[]");
+          if (!Array.isArray(arr)) return [];
+          return arr.filter(function (n) { return n >= 0 && n < N_SECTORS; }).slice(-5);
+        } catch (err) {
+          return [];
+        }
+      }
+
+      function saveRecentSector(s) {
+        const arr = loadRecentSectors();
+        arr.push(s);
+        try { localStorage.setItem(SECTORS_KEY, JSON.stringify(arr.slice(-5))); } catch (err) {}
+      }
+
+      function pickSector() {
+        const recent = loadRecentSectors();
+        const last = recent.length ? recent[recent.length - 1] : -1;
+        const last2 = recent.slice(-2);
+        let sum = 0;
+        const weights = [];
+        for (let s = 0; s < N_SECTORS; s++) {
+          let w = 1;
+          if (s === last) w = 0.15;
+          else if (last2.indexOf(s) >= 0) w = 0.4;
+          weights.push(w);
+          sum += w;
+        }
+        let r = Math.random() * sum;
+        for (let s = 0; s < N_SECTORS; s++) {
+          r -= weights[s];
+          if (r <= 0) return s;
+        }
+        return Math.floor(Math.random() * N_SECTORS);
+      }
+
+      function shapeCentroidBearing(shape) {
+        if (!shape || !shape.length) return 0;
+        let lat = 0, lon = 0, n = 0;
+        for (let i = 0; i < shape.length; i++) {
+          if (distM(shape[i], START) < 80) continue;
+          lat += shape[i][0];
+          lon += shape[i][1];
+          n += 1;
+        }
+        if (n < 3) {
+          lat = 0; lon = 0; n = 0;
+          for (let i = 0; i < shape.length; i++) {
+            lat += shape[i][0];
+            lon += shape[i][1];
+            n += 1;
+          }
+        }
+        if (!n) return 0;
+        return bearingBetween(START, [lat / n, lon / n]);
+      }
+
+      function routeNearMayo(shape, maxM) {
+        const lim = maxM == null ? 280 : maxM;
+        if (!shape) return false;
+        for (let i = 0; i < shape.length; i++) {
+          for (let j = 0; j < MAYO_PTS.length; j++) {
+            if (distM(shape[i], MAYO_PTS[j]) <= lim) return true;
+          }
+        }
+        return false;
+      }
+
+      function pickNamedGreen(nameParts, minKm, maxKm, used) {
+        const greens = greensList || GREEN_FALLBACK;
+        const cand = [];
+        for (let i = 0; i < greens.length; i++) {
+          const g = greens[i];
+          const key = g.lat + "," + g.lon;
+          if (used && used[key]) continue;
+          const label = g.name || "";
+          let hit = false;
+          for (let k = 0; k < nameParts.length; k++) {
+            if (label.indexOf(nameParts[k]) >= 0) { hit = true; break; }
+          }
+          if (!hit) continue;
+          const d = distM(START, [g.lat, g.lon]) / 1000;
+          if (d < minKm || d > maxKm) continue;
+          cand.push(g);
+        }
+        if (!cand.length) return null;
+        return cand[Math.floor(Math.random() * cand.length)];
+      }
+
+      function sectorPattern(sector) {
+        const center = sector * (Math.PI / 4);
+        const half = 0.42 + Math.random() * 0.12;
+        const n = 3 + (Math.random() < 0.4 ? 1 : 0);
+        const pts = [];
+        for (let i = 0; i < n; i++) {
+          const t = n === 1 ? 0 : (i / (n - 1)) * 2 - 1;
+          pts.push({
+            ang: center + t * half + (Math.random() - 0.5) * 0.1,
+            radFrac: 0.7 + (1 - Math.abs(t)) * 0.45 + (Math.random() - 0.5) * 0.1,
+            apex: Math.abs(t) < 0.35
+          });
+        }
+        return { sector: sector, center: center, pts: pts };
+      }
+
+      function applySectorPattern(pattern, targetKm, scale) {
+        let baseR = (targetKm / 2.7) * scale;
+        baseR = Math.max(0.85, Math.min(3.5, baseR));
         const greens = greensList || GREEN_FALLBACK;
         const used = {};
+        const prefer = SECTOR_PREFERRED[pattern.sector] || [];
+        const forceMayo = originIsBB && (pattern.sector === 0 || pattern.sector === 7) && targetKm >= 4.8;
         return pattern.pts.map(function (p) {
-          if (p.wantGreen) {
-            const g = pickGreenInSector(p.ang, Math.max(0.25, baseR * 0.45), baseR * 1.55, greens, used);
-            if (g) {
-              used[g.lat + "," + g.lon] = 1;
-              return [g.lat, g.lon];
+          if (p.apex && forceMayo) {
+            const mayo = pickNamedGreen(["Parque de Mayo"], 0.8, 3.2, used);
+            if (mayo) {
+              used[mayo.lat + "," + mayo.lon] = 1;
+              return [mayo.lat, mayo.lon];
             }
+          }
+          if (p.apex && prefer.length) {
+            const named = pickNamedGreen(prefer, Math.max(0.45, baseR * 0.45), baseR * 1.5, used);
+            if (named) {
+              used[named.lat + "," + named.lon] = 1;
+              return [named.lat, named.lon];
+            }
+          }
+          const g = pickGreenInSector(p.ang, Math.max(0.4, baseR * 0.45), baseR * 1.5, greens, used);
+          if (g) {
+            used[g.lat + "," + g.lon] = 1;
+            return [g.lat, g.lon];
           }
           return destPoint(START, p.ang, baseR * p.radFrac);
         });
@@ -1944,7 +2289,11 @@
             directions_options: { units: "kilometers" }
           })
         });
-        if (!res.ok) throw new Error("valhalla " + res.status);
+        if (!res.ok) {
+          const err = new Error("valhalla " + res.status);
+          if (res.status === 429 || res.status === 503) err.rateLimited = true;
+          throw err;
+        }
         const data = await res.json();
         if (!data.trip || !data.trip.legs) throw new Error("valhalla sin ruta");
         const shape = [];
@@ -1979,30 +2328,79 @@
 
       async function suggestLoop(targetKm) {
         let lastError = null;
-        for (let s = 0; s < 8; s++) {
-          const pattern = randomPattern();
+        let best = null;
+        let bestScore = Infinity;
+        const sector = pickSector();
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const pattern = sectorPattern(sector);
           let scale = 1;
-          for (let i = 0; i < 5; i++) {
-            const waypoints = applyPattern(pattern, targetKm, scale);
+          if ((sector === 0 || sector === 7) && targetKm >= 4.8) {
+            scale = Math.max(1, 2.25 / (targetKm / 2.7));
+          }
+          for (let i = 0; i < 4; i++) {
+            const waypoints = applySectorPattern(pattern, targetKm, scale);
             const locations = [START].concat(waypoints, [START]);
             let route;
             try {
               route = await routeWalking(locations);
             } catch (err) {
               lastError = err;
+              if (err && err.rateLimited) {
+                if (best && Math.abs(best.km / targetKm - 1) <= 0.2) {
+                  saveRecentSector(bearingToSector(shapeCentroidBearing(best.shape)));
+                  return best;
+                }
+                throw err;
+              }
               break;
             }
             const ratio = route.km / targetKm;
-            if (ratio >= 0.85 && ratio <= 1.15) {
-              route.waypoints = waypoints;
+            const distOk = ratio >= 0.85 && ratio <= 1.15;
+            const cBrg = shapeCentroidBearing(route.shape);
+            const cSec = bearingToSector(cBrg);
+            route.waypoints = waypoints;
+            const score = (distOk ? 0 : Math.abs(ratio - 1) * 12) + sectorDiff(cSec, sector);
+            if (score < bestScore) {
+              best = route;
+              bestScore = score;
+            }
+            if (distOk && cSec === sector) {
+              saveRecentSector(cSec);
               return route;
             }
-            scale *= targetKm / route.km;
-            scale = Math.max(0.35, Math.min(2.6, scale));
+            if (distOk && sectorDiff(cSec, sector) === 1 && attempt >= 2) {
+              saveRecentSector(cSec);
+              return route;
+            }
+            if (!distOk) scale *= targetKm / route.km;
+            else scale *= 1.18;
+            scale = Math.max(0.5, Math.min(2.2, scale));
           }
+        }
+        if (best && Math.abs(best.km / targetKm - 1) <= 0.2) {
+          saveRecentSector(bearingToSector(shapeCentroidBearing(best.shape)));
+          return best;
         }
         throw lastError || new Error("sin ruta");
       }
+
+      window.__generateOne = function (targetKm) {
+        return suggestLoop(Number(targetKm) || 7).then(function (route) {
+          const brg = shapeCentroidBearing(route.shape);
+          return {
+            km: route.km,
+            target: Number(targetKm) || 7,
+            centroidBrg: brg,
+            centroidSector: SECTOR_NAMES[bearingToSector(brg)],
+            sectorIndex: bearingToSector(brg),
+            mayo: routeNearMayo(route.shape, 280),
+            shape: route.shape,
+            waypoints: route.waypoints,
+            originName: originName,
+            originIsBB: originIsBB
+          };
+        });
+      };
 
       window.__camineTest = function () {
         const panel = document.getElementById("ui-panel");
@@ -2029,7 +2427,12 @@
           hasCloseSvg: !!(close && close.querySelector("svg")),
           hasHamburger: /☰/.test((eye && eye.textContent) || "") || /☰/.test(document.body.innerText),
           h1: document.querySelector("h1") && document.querySelector("h1").innerText,
-          hasFormaUI: !!document.getElementById("forma-presets")
+          hasFormaUI: !!document.getElementById("forma-presets"),
+          originName: originName,
+          originIsBB: originIsBB,
+          start: [START[0], START[1]],
+          locBox: document.getElementById("loc-box").classList.contains("show"),
+          locBtn: !!(document.getElementById("btn-loc"))
         };
       };
     }
