@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="Cache-Control" content="no-cache">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Camine, señora, camine - Generador de rutas al azar en tu ciudad</title>
   <meta name="description" content="Camine, señora, camine - Generador de rutas al azar en tu ciudad">
@@ -664,7 +665,7 @@
       display: none;
       position: fixed;
       left: max(12px, env(safe-area-inset-left));
-      bottom: max(16px, env(safe-area-inset-bottom));
+      bottom: max(40px, calc(env(safe-area-inset-bottom) + 28px));
       z-index: 32;
       padding: 6px 12px;
       background: var(--ink);
@@ -678,7 +679,27 @@
       box-shadow: none;
       pointer-events: none;
     }
-    body.sim-mode #sim-chip { display: block; }
+    body.sim-mode #sim-chip { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+    #sim-chip-hint {
+      display: block;
+      font-family: var(--font-body);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0;
+      text-transform: none;
+      opacity: 0.9;
+    }
+    body.walking #sim-chip-hint { display: none; }
+    .app-version, #help-version {
+      display: inline-block;
+      margin-top: 12px;
+      margin-left: 4px;
+      color: var(--mute);
+      font-family: var(--font-body);
+      font-size: 11px;
+      font-weight: 500;
+    }
+    #help-version { display: block; margin-top: 8px; margin-left: 0; }
 
     #reset-same {
       background: var(--ink);
@@ -874,6 +895,7 @@
     <div id="congrats-banner"></div>
     <input id="foto-input" type="file" accept="image/*" capture="environment">
     <button type="button" id="btn-help" class="btn-help">Cómo se usa</button>
+    <span class="app-version" data-app-version></span>
     <button type="button" id="btn-reset-all" class="btn-reset-all">Reiniciar todo</button>
   </section>
   <div id="map"></div>
@@ -881,7 +903,10 @@
     <span>Tocá el mapa para elegir el punto de partida</span>
     <button type="button" id="pick-cancel" class="btn-ghost">Cancelar</button>
   </div>
-  <div id="sim-chip" title="Tocá Empezar caminata para simular el recorrido">MODO SIM</div>
+  <div id="sim-chip" title="Modo simulación: tocá Empezar caminata si no arranca sola">
+    <span id="sim-chip-label">MODO SIM</span>
+    <small id="sim-chip-hint">tocá Empezar caminata</small>
+  </div>
 
   <dialog class="modal" id="modal-reset">
     <div class="modal-body">
@@ -922,11 +947,22 @@
         <button type="button" id="help-next">Siguiente</button>
       </div>
       <button type="button" id="help-close" class="btn-help-skip">Cerrar</button>
+      <p id="help-version" data-app-version></p>
     </div>
   </dialog>
 
 
   <script>
+    const APP_VERSION = "16";
+    function applyAppVersion() {
+      document.querySelectorAll("[data-app-version]").forEach(function (el) {
+        el.textContent = "v" + APP_VERSION;
+      });
+      const label = document.getElementById("sim-chip-label");
+      if (label) label.textContent = "MODO SIM v" + APP_VERSION;
+    }
+    applyAppVersion();
+
     const MAPLIBRE_CSS = [
       "https://cdn.jsdelivr.net/npm/maplibre-gl@5.6.1/dist/maplibre-gl.css",
       "https://unpkg.com/maplibre-gl@5.6.1/dist/maplibre-gl.css",
@@ -1044,6 +1080,9 @@
         return false;
       }
       const SIM_MODE = readSimFlag();
+      applyAppVersion();
+      document.body.dataset.version = APP_VERSION;
+      let simStartTimer = 0;
       if (SIM_MODE) {
         document.body.classList.add("sim-mode");
         window.__walkDebug = function () {
@@ -1061,6 +1100,9 @@
         };
       }
       const WALK_KEY = "camine-senora-camine.walk";
+      if (SIM_MODE) {
+        try { localStorage.removeItem(WALK_KEY); } catch (err) {}
+      }
       const GREENS_KEY = "camine-senora-camine.greens";
       const DB_NAME = "camine-senora-camine";
       const SNAP_MAX_M = 40;
@@ -2432,6 +2474,14 @@
         return best;
       }
 
+      function syncPacmanToProgress() {
+        if (!startMarker || !walkTrack || !walk) return;
+        const pose = poseAt(walkTrack, walk.progressM || 0);
+        startMarker.setLngLat([pose.pt[1], pose.pt[0]]);
+        const rot = startMarker.getElement().querySelector(".pacman-rot");
+        if (rot) rot.style.transform = "rotate(" + pose.deg + "deg)";
+      }
+
       function updateProgressVisuals() {
         if (!mapStyleReady || !walkTrack) return;
         ensureWalkLayers();
@@ -2440,6 +2490,7 @@
         map.getSource("walk-progress").setData(slice.length >= 2 ? lineFromLatLon(slice) : emptyLine());
         const gps = (walk && walk.gpsTrack) || [];
         map.getSource("walk-gps").setData(gps.length >= 2 ? lineFromLatLon(gps.map(function (g) { return [g.lat, g.lon]; })) : emptyLine());
+        if (walk && walk.watching && !walk.complete) syncPacmanToProgress();
       }
 
       function setUserDot(lat, lon) {
@@ -2569,7 +2620,10 @@
       }
 
       function startSim() {
-        if (!walkTrack) return;
+        if (!walkTrack) {
+          setStatus("Todavía no hay una ruta para simular. Tocá Sugerir ruta.", true);
+          return;
+        }
         const total = walkTrack.totalM;
         const durationS = 12;
         if (simTimer) clearInterval(simTimer);
@@ -2592,17 +2646,60 @@
         }, 100);
       }
 
+      function resetWalkForSim(route) {
+        if (simTimer) { clearInterval(simTimer); simTimer = null; }
+        hideCherryBanner();
+        if (congratsBanner) congratsBanner.classList.remove("show");
+        removeUserDot();
+        document.body.classList.remove("walking");
+        walk = newWalkState();
+        if (route || currentRoute) walk.routeSig = routeSig(route || currentRoute);
+        try { localStorage.removeItem(WALK_KEY); } catch (err) {}
+        saveWalk();
+        if (mapStyleReady) updateProgressVisuals();
+        btnWalk.textContent = "Empezar caminata";
+        btnWalk.disabled = false;
+      }
+
+      function scheduleSimStart() {
+        if (!SIM_MODE || viewingHistoryId) return;
+        if (simStartTimer) clearTimeout(simStartTimer);
+        function go() {
+          simStartTimer = 0;
+          if (viewingHistoryId) return;
+          if (!currentRoute || !walkTrack) return;
+          if (walk && walk.watching && simTimer) return;
+          const help = document.getElementById("modal-help");
+          if (help && help.open) {
+            simStartTimer = setTimeout(go, 400);
+            return;
+          }
+          startWalk();
+        }
+        simStartTimer = setTimeout(go, 700);
+      }
+
       function startWalk() {
         if (!currentRoute || !walkTrack) {
           setStatus("Primero hace falta una ruta.", true);
           return;
         }
-        if (walk && walk.complete) walk = newWalkState();
+        if (SIM_MODE) {
+          stopAnim();
+          resetWalkForSim(currentRoute);
+          if (!currentRoute.fruit) {
+            setStatus("Esta ruta no tiene cerezas. Tocá Sugerir ruta para armar otra.", true);
+          }
+        } else if (walk && walk.complete) {
+          walk = newWalkState();
+        }
         if (!walk) walk = newWalkState();
         walk.routeSig = routeSig(currentRoute);
-        if (!walk.startedAt) walk.startedAt = Date.now();
+        if (SIM_MODE || !walk.startedAt) walk.startedAt = Date.now();
         walk.watching = true;
         walk.complete = false;
+        walk.cherryPrompted = false;
+        walk.cherryDismissed = false;
         congratsBanner.classList.remove("show");
         document.body.classList.add("walking");
         btnWalk.textContent = "Caminando…";
@@ -2712,7 +2809,15 @@
 
       function bindWalkToRoute(route) {
         walkTrack = route && route.shape ? buildTrack(route.shape) : null;
-        fruitAlongM = walkTrack ? fruitDistanceOnRoute(walkTrack, route.fruit) : 0;
+        fruitAlongM = walkTrack ? fruitDistanceOnRoute(walkTrack, route && route.fruit) : 0;
+        if (SIM_MODE && !viewingHistoryId) {
+          resetWalkForSim(route);
+          if (!route || !isPoint(route.fruit)) {
+            setStatus("Esta ruta no tiene cerezas. Tocá Sugerir ruta para armar otra.", true);
+          }
+          scheduleSimStart();
+          return;
+        }
         const saved = loadWalk();
         const sig = routeSig(route);
         if (saved && saved.routeSig === sig && !viewingHistoryId) {
@@ -3446,6 +3551,13 @@
             };
           })(),
           simMode: !!SIM_MODE,
+          appVersion: APP_VERSION,
+          walkProgress: walk ? walk.progressM : 0,
+          walkComplete: !!(walk && walk.complete),
+          walkWatching: !!(walk && walk.watching),
+          hasFruit: !!(currentRoute && currentRoute.fruit),
+          hasWalkTrack: !!(walkTrack && walkTrack.totalM > 0),
+          simTimerOn: !!simTimer,
           simChip: (function () {
             const el = document.getElementById("sim-chip");
             const cs = el && window.getComputedStyle(el);
