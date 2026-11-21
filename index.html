@@ -96,6 +96,10 @@
       flex: none;
       overflow: visible;
     }
+    /* Optical nudge: the eye glyph reads slightly left when geometrically centered. */
+    #btn-panel svg {
+      transform: translateX(1.5px);
+    }
     #btn-panel {
       position: fixed;
       top: max(10px, env(safe-area-inset-top));
