@@ -56,7 +56,7 @@
       color: var(--ink);
     }
     h1 {
-      margin: 0 0 2px;
+      margin: 0 0 12px;
       font-family: var(--font-display);
       font-size: 22px;
       font-weight: 600;
@@ -79,14 +79,23 @@
     input:focus:not(:focus-visible) { outline: none; }
 
     #btn-panel, #btn-panel-close {
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: grid;
+      place-items: center;
+      place-content: center;
       padding: 0;
+      margin: 0;
+      line-height: 0;
+      font-size: 0;
       color: var(--ink);
       cursor: pointer;
+      box-sizing: border-box;
     }
-    #btn-panel svg, #btn-panel-close svg { display: block; }
+    #btn-panel svg, #btn-panel-close svg {
+      display: block;
+      margin: 0;
+      flex: none;
+      overflow: visible;
+    }
     #btn-panel {
       position: fixed;
       top: max(10px, env(safe-area-inset-top));
@@ -108,7 +117,7 @@
     }
     #btn-panel:hover { filter: none; background: var(--canvas); }
     body.panel-open #btn-panel {
-      display: flex;
+      display: grid;
       opacity: 0;
       transform: scale(0.92);
       visibility: hidden;
@@ -213,6 +222,11 @@
     button:disabled { opacity: 0.5; cursor: default; filter: none; transform: none; }
     @media (prefers-reduced-motion: reduce) {
       button:active { transform: none; }
+      #ui-panel, #btn-panel, #btn-panel-close,
+      dialog.modal, dialog.modal::backdrop,
+      #loc-box, #pick-hint {
+        transition: none !important;
+      }
     }
 
     #btn {
@@ -593,6 +607,55 @@
     .loc-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
     .loc-actions button { min-height: 44px; font-size: 14px; padding: 8px 16px; }
 
+    body.picking-origin #map,
+    body.picking-origin .maplibregl-canvas,
+    body.picking-origin .maplibregl-canvas-container {
+      cursor: crosshair !important;
+    }
+    #pick-hint {
+      display: none;
+      position: fixed;
+      left: 50%;
+      bottom: max(16px, env(safe-area-inset-bottom));
+      z-index: 28;
+      max-width: min(440px, calc(100vw - 24px));
+      padding: 12px 16px;
+      background: var(--panel);
+      backdrop-filter: blur(16px) saturate(1.1);
+      -webkit-backdrop-filter: blur(16px) saturate(1.1);
+      border: 1px solid var(--hairline-soft);
+      border-radius: 0;
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1.4;
+      text-align: center;
+      box-shadow: none;
+      opacity: 0;
+      transform: translateX(-50%) translateY(8px) scale(0.98);
+      pointer-events: none;
+      transition: opacity 200ms ease-out, transform 200ms ease-out;
+    }
+    #pick-hint.is-mounted { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    #pick-hint.is-open {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0) scale(1);
+      pointer-events: auto;
+    }
+    #pick-cancel {
+      min-height: 0;
+      padding: 4px 0;
+      background: none;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      color: var(--mute);
+      font-size: 12px;
+      font-weight: 500;
+    }
+    #pick-cancel:hover { filter: none; background: none; color: var(--ink); }
+
     #reset-same {
       background: var(--ink);
       color: var(--on-primary);
@@ -605,6 +668,91 @@
       box-shadow: none;
     }
     #reset-same:hover { filter: none; background: #000; }
+
+    .btn-help,
+    #btn-help {
+      display: inline-block;
+      margin-top: 12px;
+      margin-right: 14px;
+      padding: 4px 0;
+      min-height: 0;
+      background: none;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      color: var(--mute);
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 1.5;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .btn-help:hover,
+    #btn-help:hover {
+      filter: none;
+      background: none;
+      color: var(--ink);
+    }
+    .tutorial-count {
+      margin: 0 0 12px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--mute);
+    }
+    .tutorial-step {
+      min-height: 7.5em;
+    }
+    .tutorial-step h3 {
+      margin: 0 0 8px;
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 500;
+      line-height: 1.2;
+      color: var(--ink);
+    }
+    .tutorial-step p {
+      margin: 0;
+      color: var(--charcoal);
+      font-size: 16px;
+      line-height: 1.5;
+    }
+    .tutorial-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 24px;
+    }
+    #help-next {
+      background: var(--ink);
+      color: var(--on-primary);
+      border: 0;
+      min-height: 48px;
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: 500;
+      border-radius: var(--radius-lg);
+    }
+    #help-next:hover { filter: none; background: #000; }
+    #help-prev { min-height: 48px; padding: 12px 24px; }
+    #help-prev[hidden] { display: none; }
+    .btn-help-skip,
+    #help-close {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 4px 0;
+      min-height: 0;
+      background: none;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      color: var(--mute);
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    #help-close:hover { filter: none; background: none; color: var(--ink); }
 
     .btn-reset-all,
     #btn-reset-all {
@@ -632,7 +780,7 @@
     }
 
     @media (max-width: 640px) {
-      h1 { font-size: 18px; }
+      h1 { font-size: 18px; margin-bottom: 10px; }
       .lead { margin-bottom: 8px; font-size: 12px; }
       #ui-panel {
         width: calc(100vw - 20px - 54px);
@@ -655,11 +803,10 @@
 </style>
 </head>
 <body>
-  <button type="button" id="btn-panel" aria-controls="ui-panel" aria-expanded="false" aria-label="Mostrar menú" title="Mostrar menú"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+  <button type="button" id="btn-panel" aria-controls="ui-panel" aria-expanded="false" aria-label="Mostrar menú" title="Mostrar menú"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12C2 12 6 5 12 5s10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
   <section id="ui-panel" aria-label="Menú">
-    <button type="button" id="btn-panel-close" aria-controls="ui-panel" aria-expanded="false" aria-label="Ocultar menú" title="Ocultar menú"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <button type="button" id="btn-panel-close" aria-controls="ui-panel" aria-expanded="false" aria-label="Ocultar menú" title="Ocultar menú"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     <h1>Camine, señora, camine</h1>
-    <p class="lead" id="origin-label">Vueltas a pie desde: Teatro Municipal (Alsina 425).</p>
     <form id="form">
       <div>
         <div class="ctrl-label" id="lbl-dist">Distancia</div>
@@ -680,15 +827,15 @@
       <button type="button" id="btn-walk" class="btn-secondary">Empezar caminata</button>
       <button type="button" id="btn-reset" class="btn-ghost">Reiniciar / editar</button>
       <button type="button" id="btn-hist" class="btn-ghost">Historial</button>
-      <button type="button" id="btn-loc" class="btn-ghost">Cambiar de locación</button>
+      <button type="button" id="btn-loc" class="btn-ghost">Elegir punto de partida</button>
     </div>
     <div id="loc-box">
-      <div class="ctrl-label">Buscar ciudad, lugar o dirección</div>
+      <div class="ctrl-label">Buscá un lugar o elegí un punto en el mapa</div>
       <input type="search" id="loc-q" placeholder="Ej. Obelisco, Buenos Aires" autocomplete="off">
       <div id="loc-results"></div>
       <div class="loc-actions">
         <button type="button" id="loc-geo" class="btn-secondary">Usar mi ubicación actual</button>
-        <button type="button" id="loc-bb" class="btn-ghost">Volver a Bahía Blanca</button>
+        <button type="button" id="loc-bb" class="btn-ghost">Volver al Teatro (Bahía Blanca)</button>
         <button type="button" id="loc-cancel" class="btn-ghost">Cerrar</button>
       </div>
     </div>
@@ -702,9 +849,14 @@
     </div>
     <div id="congrats-banner"></div>
     <input id="foto-input" type="file" accept="image/*" capture="environment">
+    <button type="button" id="btn-help" class="btn-help">Cómo se usa</button>
     <button type="button" id="btn-reset-all" class="btn-reset-all">Reiniciar todo</button>
   </section>
   <div id="map"></div>
+  <div id="pick-hint" role="status" aria-live="polite">
+    <span>Tocá el mapa para elegir el punto de partida</span>
+    <button type="button" id="pick-cancel" class="btn-ghost">Cancelar</button>
+  </div>
 
   <dialog class="modal" id="modal-reset">
     <div class="modal-body">
@@ -734,6 +886,20 @@
       </div>
     </div>
   </dialog>
+
+  <dialog class="modal" id="modal-help" aria-labelledby="help-title">
+    <div class="modal-body tutorial">
+      <h2 id="help-title">Cómo se usa</h2>
+      <p class="tutorial-count" id="help-count">1 / 6</p>
+      <div id="help-step" class="tutorial-step"></div>
+      <div class="tutorial-nav">
+        <button type="button" id="help-prev" class="btn-ghost">Anterior</button>
+        <button type="button" id="help-next">Siguiente</button>
+      </div>
+      <button type="button" id="help-close" class="btn-help-skip">Cerrar</button>
+    </div>
+  </dialog>
+
 
   <script>
     const MAPLIBRE_CSS = [
@@ -831,6 +997,7 @@
       let requestId = 0;
       const PREFS_KEY = "camine-senora-camine.prefs";
       const PANEL_KEY = "camine-senora-camine.panel";
+      const TUTORIAL_KEY = "camine-senora-camine.tutorial";
       let prefs = { preset: "7", km: 7 };
 
 
@@ -911,6 +1078,7 @@
       const fotoInput = document.getElementById("foto-input");
       const modalReset = document.getElementById("modal-reset");
       const modalHist = document.getElementById("modal-hist");
+      const modalHelp = document.getElementById("modal-help");
       greensList = GREEN_FALLBACK;
       ensureGreens();
 
@@ -1326,6 +1494,67 @@
       if (prefs.preset !== "custom") prefs.km = Number(prefs.preset);
       kmInput.value = String(prefs.km);
       syncKmChips();
+      const HELP_STEPS = [
+        {
+          title: "Elegí la distancia",
+          body: "Usá 3, 5 o 7 km, u Otra si querés poner un valor de 1 a 20."
+        },
+        {
+          title: "Sugerir ruta",
+          body: "Tocá Sugerir ruta y Pac-Man recorre el camino para que veas la vuelta."
+        },
+        {
+          title: "Elegir punto de partida",
+          body: "Tocá el mapa para marcar desde dónde largás, o buscá un lugar / usá tu ubicación. Si no elegís nada, se parte del Teatro Municipal de Bahía Blanca."
+        },
+        {
+          title: "Empezar caminata",
+          body: "Esto prende el GPS y pinta en gris lo que ya recorriste. Funciona mejor desde el celu, abriendo la página en el navegador."
+        },
+        {
+          title: "Las cerezas",
+          body: "Cuando llegues a las cerezas podés sacar una foto. Es opcional: si no querés, tocá Ahora no y seguí."
+        },
+        {
+          title: "Historial y menú",
+          body: "En Historial ves tus vueltas y las estadísticas. Para liberar el mapa, ocultá el menú con la ✕ y volvé a abrirlo con el ojito."
+        }
+      ];
+      let helpStep = 0;
+
+      function tutorialSeen() {
+        try { return localStorage.getItem(TUTORIAL_KEY) === "seen"; } catch (err) { return false; }
+      }
+
+      function markTutorialSeen() {
+        try { localStorage.setItem(TUTORIAL_KEY, "seen"); } catch (err) {}
+      }
+
+      function renderHelpStep() {
+        const step = HELP_STEPS[helpStep];
+        const box = document.getElementById("help-step");
+        const count = document.getElementById("help-count");
+        const prev = document.getElementById("help-prev");
+        const next = document.getElementById("help-next");
+        if (!step || !box) return;
+        box.innerHTML = "<h3>" + step.title + "</h3><p>" + step.body + "</p>";
+        if (count) count.textContent = (helpStep + 1) + " / " + HELP_STEPS.length;
+        if (prev) prev.hidden = helpStep === 0;
+        if (next) next.textContent = helpStep === HELP_STEPS.length - 1 ? "Listo" : "Siguiente";
+      }
+
+      function openTutorial() {
+        helpStep = 0;
+        renderHelpStep();
+        revealPanel();
+        openDialog(modalHelp);
+      }
+
+      function closeTutorial() {
+        markTutorialSeen();
+        closeDialog(modalHelp);
+      }
+
       setPanelOpen(loadPanelOpen(), false);
 
       document.getElementById("btn-panel").addEventListener("click", function () {
@@ -1334,6 +1563,22 @@
       document.getElementById("btn-panel-close").addEventListener("click", function () {
         setPanelOpen(false);
       });
+      document.getElementById("btn-help").addEventListener("click", function () {
+        openTutorial();
+      });
+      document.getElementById("help-prev").addEventListener("click", function () {
+        if (helpStep > 0) { helpStep -= 1; renderHelpStep(); }
+      });
+      document.getElementById("help-next").addEventListener("click", function () {
+        if (helpStep < HELP_STEPS.length - 1) { helpStep += 1; renderHelpStep(); }
+        else closeTutorial();
+      });
+      document.getElementById("help-close").addEventListener("click", function () {
+        closeTutorial();
+      });
+      if (!tutorialSeen()) {
+        setTimeout(function () { openTutorial(); }, 400);
+      }
       document.getElementById("km-presets").addEventListener("click", function (ev) {
         const chip = ev.target.closest(".chip");
         if (!chip) return;
@@ -1354,6 +1599,69 @@
       function updateOriginLabel() {
         const el = document.getElementById("origin-label");
         if (el) el.textContent = "Vueltas a pie desde: " + originName;
+      }
+
+      function shortPlaceName(data, fallback) {
+        const fb = fallback || "Punto de partida";
+        if (!data) return fb;
+        const addr = data.address || {};
+        let name = data.name || addr.road || addr.pedestrian || addr.neighbourhood || addr.suburb || addr.city || addr.town || addr.village || data.display_name || fb;
+        if (name && name.length > 80) name = name.slice(0, 77) + "…";
+        return name || fb;
+      }
+
+      async function reverseName(lat, lon, fallback) {
+        const fb = fallback || "Punto de partida";
+        try {
+          const res = await fetch("https://nominatim.openstreetmap.org/reverse?format=json&accept-language=es&lat=" + lat + "&lon=" + lon, {
+            headers: { "Accept": "application/json" }
+          });
+          if (!res.ok) return fb;
+          return shortPlaceName(await res.json(), fb);
+        } catch (err) {
+          return fb;
+        }
+      }
+
+      let pickingOrigin = false;
+      let pickIgnoreUntil = 0;
+      function setPickMode(on) {
+        pickingOrigin = !!on;
+        document.body.classList.toggle("picking-origin", pickingOrigin);
+        const hint = document.getElementById("pick-hint");
+        if (!hint) return;
+        if (pickingOrigin) {
+          if (prefersReducedMotion()) {
+            hint.classList.add("is-mounted");
+            hint.classList.add("is-open");
+          } else playOpen(hint);
+        } else {
+          hint.classList.remove("is-open");
+          const hide = function () {
+            if (pickingOrigin) return;
+            hint.classList.remove("is-mounted");
+          };
+          if (prefersReducedMotion()) hide();
+          else afterTransition(hint, hide);
+        }
+      }
+
+      function applyOriginName(lat, lon, name) {
+        if (Math.abs(START[0] - lat) > 1e-7 || Math.abs(START[1] - lon) > 1e-7) return;
+        originName = name || "Punto de partida";
+        if (currentRoute) currentRoute.originName = originName;
+        placeOriginLabel();
+      }
+
+      async function chooseMapPoint(lat, lon) {
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+        pickIgnoreUntil = Date.now() + 500;
+        setPickMode(false);
+        const pending = changeOrigin(lat, lon, "Punto de partida");
+        reverseName(lat, lon, "Punto de partida").then(function (name) {
+          applyOriginName(lat, lon, name);
+        });
+        await pending;
       }
 
       function setLocBoxOpen(open) {
@@ -1395,6 +1703,7 @@
         currentRoute = null;
         placeMarker();
         setLocBoxOpen(false);
+        setPickMode(false);
         await abandonWalkIfNeeded();
         resetProgressKeepRoute();
         await generateAndShow(getTargetKm(), true);
@@ -1402,10 +1711,23 @@
 
       document.getElementById("btn-loc").addEventListener("click", function () {
         const box = document.getElementById("loc-box");
-        setLocBoxOpen(!box.classList.contains("show"));
+        const open = !box.classList.contains("show");
+        setLocBoxOpen(open);
+        setPickMode(open);
       });
       document.getElementById("loc-cancel").addEventListener("click", function () {
         setLocBoxOpen(false);
+        setPickMode(false);
+      });
+      document.getElementById("pick-cancel").addEventListener("click", function () {
+        setLocBoxOpen(false);
+        setPickMode(false);
+      });
+      document.addEventListener("keydown", function (ev) {
+        if (ev.key === "Escape" && pickingOrigin) {
+          setLocBoxOpen(false);
+          setPickMode(false);
+        }
       });
       document.getElementById("loc-bb").addEventListener("click", function () {
         changeOrigin(TEATRO[0], TEATRO[1], TEATRO_NAME);
@@ -1418,17 +1740,11 @@
         setStatus("Buscando tu ubicación…");
         navigator.geolocation.getCurrentPosition(function (pos) {
           const lat = pos.coords.latitude, lon = pos.coords.longitude;
-          fetch("https://nominatim.openstreetmap.org/reverse?format=json&accept-language=es&lat=" + lat + "&lon=" + lon)
-            .then(function (res) { return res.ok ? res.json() : null; })
-            .then(function (data) {
-              let name = originName;
-              if (data) {
-                name = data.name || (data.address && (data.address.road || data.address.suburb || data.address.city || data.address.town)) || data.display_name || (lat.toFixed(5) + ", " + lon.toFixed(5));
-                if (name && name.length > 80) name = name.slice(0, 77) + "…";
-              } else name = lat.toFixed(5) + ", " + lon.toFixed(5);
-              return changeOrigin(lat, lon, name);
-            })
-            .catch(function () { return changeOrigin(lat, lon, lat.toFixed(5) + ", " + lon.toFixed(5)); });
+          changeOrigin(lat, lon, "Punto de partida").then(function () {
+            return reverseName(lat, lon, "Punto de partida");
+          }).then(function (name) {
+            applyOriginName(lat, lon, name);
+          }).catch(function () {});
         }, function () {
           setStatus("No pude obtener tu ubicación. Revisá los permisos.", true);
         }, { enableHighAccuracy: true, timeout: 12000 });
@@ -1472,6 +1788,71 @@
             });
         }, 400);
       });
+
+      (function bindOriginPick() {
+        if (!map || map._originPickBound) return;
+        map._originPickBound = true;
+        let pressTimer = 0;
+        let pressPt = null;
+        const LONG_MS = 550;
+        const MOVE_PX = 14;
+
+        function clearPress() {
+          if (pressTimer) { clearTimeout(pressTimer); pressTimer = 0; }
+          pressPt = null;
+        }
+        function pointFromEvent(e) {
+          if (e && e.lngLat) return { lat: e.lngLat.lat, lon: e.lngLat.lng, x: e.point && e.point.x, y: e.point && e.point.y };
+          return null;
+        }
+        function startPress(e) {
+          clearPress();
+          const pt = pointFromEvent(e);
+          if (!pt) return;
+          pressPt = pt;
+          pressTimer = setTimeout(function () {
+            const held = pressPt;
+            clearPress();
+            if (held) chooseMapPoint(held.lat, held.lon);
+          }, LONG_MS);
+        }
+        function maybeMoved(e) {
+          if (!pressPt || !e.point) return;
+          const dx = e.point.x - pressPt.x, dy = e.point.y - pressPt.y;
+          if ((dx * dx + dy * dy) > (MOVE_PX * MOVE_PX)) clearPress();
+        }
+
+        map.on("click", function (e) {
+          if (!pickingOrigin) return;
+          if (Date.now() < pickIgnoreUntil) return;
+          if (!e.lngLat) return;
+          chooseMapPoint(e.lngLat.lat, e.lngLat.lng);
+        });
+        map.on("contextmenu", function (e) {
+          if (e.originalEvent) {
+            e.originalEvent.preventDefault();
+            e.originalEvent.stopPropagation();
+          }
+          if (Date.now() < pickIgnoreUntil) return;
+          if (!e.lngLat) return;
+          chooseMapPoint(e.lngLat.lat, e.lngLat.lng);
+        });
+        map.on("mousedown", function (e) {
+          const btn = e.originalEvent && e.originalEvent.button;
+          if (btn === 2) return;
+          startPress(e);
+        });
+        map.on("touchstart", function (e) {
+          if (e.points && e.points.length !== 1) { clearPress(); return; }
+          startPress(e);
+        });
+        map.on("mousemove", maybeMoved);
+        map.on("touchmove", maybeMoved);
+        map.on("mouseup", clearPress);
+        map.on("touchend", clearPress);
+        map.on("touchcancel", clearPress);
+        map.on("dragstart", clearPress);
+      })();
 
       form.addEventListener("submit", async function (ev) {
         ev.preventDefault();
@@ -2388,14 +2769,18 @@
           resetAllAppData();
         });
       }
-      [modalReset, modalHist].forEach(function (dlg) {
+      [modalReset, modalHist, modalHelp].forEach(function (dlg) {
         if (!dlg) return;
         dlg.addEventListener("cancel", function (ev) {
           ev.preventDefault();
-          closeDialog(dlg);
+          if (dlg === modalHelp) closeTutorial();
+          else closeDialog(dlg);
         });
         dlg.addEventListener("click", function (ev) {
-          if (ev.target === dlg) closeDialog(dlg);
+          if (ev.target === dlg) {
+            if (dlg === modalHelp) closeTutorial();
+            else closeDialog(dlg);
+          }
         });
       });
       btnReset.addEventListener("click", function () { openDialog(modalReset); });
@@ -2950,6 +3335,8 @@
           }, "image/jpeg", 0.8);
         });
       };
+      window.__setPickMode = setPickMode;
+      window.__chooseMapPoint = chooseMapPoint;
       window.__camineTest = function () {
         const panel = document.getElementById("ui-panel");
         const eye = document.getElementById("btn-panel");
@@ -2976,11 +3363,27 @@
           hasHamburger: /☰/.test((eye && eye.textContent) || "") || /☰/.test(document.body.innerText),
           h1: document.querySelector("h1") && document.querySelector("h1").innerText,
           hasFormaUI: !!document.getElementById("forma-presets"),
+          hasOriginLabel: !!document.getElementById("origin-label"),
+          hasHelpBtn: !!document.getElementById("btn-help"),
+          helpOpen: !!(modalHelp && modalHelp.open && modalHelp.classList.contains("is-open")),
+          helpStep: helpStep,
+          helpTitle: (document.querySelector("#help-step h3") && document.querySelector("#help-step h3").textContent),
+          tutorialKey: (function () { try { return localStorage.getItem(TUTORIAL_KEY); } catch (e) { return null; } })(),
           originName: originName,
           originIsBB: originIsBB,
           start: [START[0], START[1]],
           locBox: document.getElementById("loc-box").classList.contains("show"),
           locBtn: !!(document.getElementById("btn-loc")),
+          locBtnLabel: (document.getElementById("btn-loc") && document.getElementById("btn-loc").textContent),
+          locBbLabel: (document.getElementById("loc-bb") && document.getElementById("loc-bb").textContent),
+          pickingOrigin: !!pickingOrigin,
+          pickHint: (function () {
+            const el = document.getElementById("pick-hint");
+            const cs = el && window.getComputedStyle(el);
+            return !!(el && el.classList.contains("is-open") && cs && cs.display !== "none" && cs.opacity !== "0");
+          })(),
+          pickHintText: (document.querySelector("#pick-hint span") && document.querySelector("#pick-hint span").textContent),
+          hasCambiarLocacion: /Cambiar de locación/.test(document.body.innerText),
           cherryBanner: walkBanner.classList.contains("show"),
           cherryPhoto: !!(walk && walk.cherryPhotoId),
           cherryDismissed: !!(walk && walk.cherryDismissed),
