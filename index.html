@@ -1996,14 +1996,14 @@
             type: "line",
             source: "route",
             layout: { "line-cap": "round", "line-join": "round" },
-            paint: { "line-color": "#2121b0", "line-width": 5, "line-opacity": 0.92 }
+            paint: { "line-color": "#2121b0", "line-width": 6, "line-opacity": 0.96 }
           });
           map.addLayer({
-            id: "route-dots",
+            id: "route-stripe",
             type: "line",
             source: "route",
-            layout: { "line-cap": "round", "line-join": "round" },
-            paint: { "line-color": "#ffd54a", "line-width": 7, "line-dasharray": [0, 2.3], "line-opacity": 1 }
+            layout: { "line-cap": "butt", "line-join": "round" },
+            paint: { "line-color": "#ffd54a", "line-width": 6, "line-dasharray": [2, 2], "line-opacity": 1 }
           });
         }
         rotatePacman(route.pacmanDeg);
@@ -3376,6 +3376,26 @@
           originName: originName,
           originIsBB: originIsBB,
           start: [START[0], START[1]],
+          routeLayers: (function () {
+            if (!map || typeof map.getLayer !== "function") return null;
+            const ids = ((map.getStyle && map.getStyle()) || {}).layers || [];
+            const names = ids.map(function (l) { return l.id; });
+            function info(id) {
+              if (!map.getLayer(id)) return null;
+              return {
+                color: map.getPaintProperty(id, "line-color"),
+                width: map.getPaintProperty(id, "line-width"),
+                dash: map.getPaintProperty(id, "line-dasharray") || null,
+                cap: map.getLayoutProperty(id, "line-cap")
+              };
+            }
+            return {
+              ids: names.filter(function (id) { return /route|walk-/.test(id); }),
+              hasDots: names.indexOf("route-dots") !== -1,
+              casing: info("route-casing"),
+              stripe: info("route-stripe")
+            };
+          })(),
           locBox: document.getElementById("loc-box").classList.contains("show"),
           locBtn: !!(document.getElementById("btn-loc")),
           locBtnLabel: (document.getElementById("btn-loc") && document.getElementById("btn-loc").textContent),
