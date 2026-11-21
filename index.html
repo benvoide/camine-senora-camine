@@ -336,6 +336,24 @@
     .pacman-rot { transform-origin: 50% 50%; }
     .fruit-marker svg { width: 32px; height: 32px; margin: 1px; }
 
+    .home-marker {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      background: #ffffff;
+      border: 1.5px solid #111111;
+      box-sizing: border-box;
+      pointer-events: none;
+    }
+    .home-marker svg {
+      display: block;
+      width: 16px;
+      height: 16px;
+    }
+    #victory-map .home-marker { width: 24px; height: 24px; }
+    #victory-map .home-marker svg { width: 14px; height: 14px; }
+
     .origin-label-marker { pointer-events: none; z-index: 1; }
     .origin-flag {
       display: inline-block;
@@ -480,22 +498,76 @@
       font-weight: 500;
       color: var(--charcoal);
     }
+    .victory-media {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 0 0 4px;
+    }
     #victory-map {
+      position: relative;
       width: 100%;
-      aspect-ratio: 16 / 10;
+      height: 210px;
       background: var(--soft-cloud);
       overflow: hidden;
+      border: 0;
+      border-radius: 0;
     }
-    #victory-map svg { display: block; width: 100%; height: 100%; }
+    #victory-map .maplibregl-canvas-container,
+    #victory-map .maplibregl-canvas,
+    #victory-map canvas {
+      border-radius: 0;
+    }
+    #victory-map .maplibregl-ctrl-attrib,
+    #victory-map .maplibregl-compact {
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      background: rgba(255, 255, 255, 0.88) !important;
+      font-family: var(--font-body);
+      font-size: 9px;
+      line-height: 1.3;
+      margin: 0;
+    }
+    #victory-map .maplibregl-ctrl-attrib.maplibregl-compact:not(.maplibregl-compact-show) .maplibregl-ctrl-attrib-inner {
+      display: none;
+    }
+    #victory-map .maplibregl-ctrl-bottom-right,
+    #victory-map .maplibregl-ctrl-bottom-left { margin: 0; }
+    #victory-map .victory-snap,
+    #victory-map svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    #victory-map .victory-dot {
+      width: 10px;
+      height: 10px;
+      background: #111;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      box-sizing: border-box;
+    }
+    #victory-map .fruit-marker { width: 26px; height: 26px; pointer-events: none; }
+    #victory-map .fruit-marker svg { width: 24px; height: 24px; margin: 1px; }
     #victory-photo {
-      margin: 12px 0 0;
+      margin: 0;
       background: var(--soft-cloud);
     }
     #victory-photo img {
       display: block;
       width: 100%;
-      max-height: 200px;
+      height: 210px;
       object-fit: cover;
+    }
+    @media (min-width: 641px) {
+      .victory-media.has-photo {
+        flex-direction: row;
+        align-items: stretch;
+      }
+      .victory-media.has-photo #victory-map { flex: 1 1 58%; width: auto; height: 210px; }
+      .victory-media.has-photo #victory-photo { flex: 0 0 42%; width: 42%; }
+      .victory-media.has-photo #victory-photo img { height: 210px; }
     }
     #victory-new {
       background: var(--ink);
@@ -921,6 +993,8 @@
     @media (max-width: 640px) {
       #victory-title { font-size: 36px; }
       #victory-time { font-size: 40px; }
+      #victory-map { height: 150px; }
+      #victory-photo img { height: 112px; }
     }
 </style>
 </head>
@@ -1034,10 +1108,12 @@
       <p class="victory-kicker">Tiempo</p>
       <p id="victory-time">0:00</p>
       <p id="victory-dist"></p>
-      <div id="victory-map" aria-hidden="true"></div>
-      <figure id="victory-photo" hidden>
-        <img id="victory-photo-img" alt="Foto en las cerezas">
-      </figure>
+      <div class="victory-media" id="victory-media">
+        <div id="victory-map" role="img" aria-label="Mapa del recorrido"></div>
+        <figure id="victory-photo" hidden>
+          <img id="victory-photo-img" alt="Foto en las cerezas">
+        </figure>
+      </div>
       <div class="modal-actions">
         <button type="button" id="victory-new">Nueva ruta</button>
         <button type="button" id="victory-close" class="btn-ghost">Cerrar</button>
@@ -1048,7 +1124,7 @@
 
 
   <script>
-    const APP_VERSION = "17";
+    const APP_VERSION = "18";
     function applyAppVersion() {
       document.querySelectorAll("[data-app-version]").forEach(function (el) {
         el.textContent = "v" + APP_VERSION;
@@ -1157,26 +1233,40 @@
       let prefs = { preset: "7", km: 7 };
 
 
-      function readSimFlag() {
+      function readSimLevel() {
         function fromParams(params) {
           let val = null;
           params.forEach(function (v, k) {
             if (String(k).toLowerCase() === "sim") val = v;
           });
-          if (val === null) return false;
+          if (val === null) return 0;
           const s = String(val).trim().toLowerCase().replace(/\/+$/, "");
-          return s === "" || s === "1" || s === "true" || s === "yes" || s === "on";
+          if (s === "2") return 2;
+          if (s === "" || s === "1" || s === "true" || s === "yes" || s === "on") return 1;
+          return 0;
         }
         try {
-          if (fromParams(new URLSearchParams(location.search))) return true;
+          const a = fromParams(new URLSearchParams(location.search));
+          if (a) return a;
           const hash = String(location.hash || "").replace(/^#/, "").replace(/^[/?]+/, "");
-          if (hash && fromParams(new URLSearchParams(hash))) return true;
+          if (hash) {
+            const b = fromParams(new URLSearchParams(hash));
+            if (b) return b;
+          }
         } catch (err) {}
-        return false;
+        return 0;
       }
-      const SIM_MODE = readSimFlag();
+      const SIM_LEVEL = readSimLevel();
+      const SIM_MODE = SIM_LEVEL > 0;
+      const SIM2 = SIM_LEVEL === 2;
       applyAppVersion();
       document.body.dataset.version = APP_VERSION;
+      const simChipLabel = document.getElementById("sim-chip-label");
+      if (simChipLabel) {
+        simChipLabel.textContent = SIM2
+          ? ("MODO SIM 2 v" + APP_VERSION)
+          : ("MODO SIM v" + APP_VERSION);
+      }
       let simStartTimer = 0;
       if (SIM_MODE) {
         document.body.classList.add("sim-mode");
@@ -1249,6 +1339,10 @@
       let wakeLock = null;
       let viewingHistoryId = null;
       let fruitAlongM = 0;
+      let victoryMap = null;
+      let victoryMapReady = false;
+      let homeMarker = null;
+      let simRaf = 0;
 
       const btnWalk = document.getElementById("btn-walk");
       const btnReset = document.getElementById("btn-reset");
@@ -1268,6 +1362,7 @@
         style: OFM_STYLE,
         center: [START[1], START[0]],
         zoom: 14,
+        preserveDrawingBuffer: true,
         attributionControl: { compact: true, customAttribution: OSM_ATTR + ' © <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>' }
       });
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
@@ -1319,6 +1414,48 @@
         el.title = "Cerezas";
         el.innerHTML = '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M13 17 C13 11 16 7 20 4" fill="none" stroke="#1f7a2c" stroke-width="1.8" stroke-linecap="round"/><path d="M20 17 C20.2 12 20.2 8 20 4" fill="none" stroke="#1f7a2c" stroke-width="1.8" stroke-linecap="round"/><ellipse cx="23.2" cy="6.2" rx="5.2" ry="2.3" fill="#3bb343" transform="rotate(-28 23.2 6.2)"/><circle cx="12.2" cy="22.2" r="7.1" fill="#c4161d"/><circle cx="12.2" cy="22.2" r="6.6" fill="#e31b23"/><circle cx="20.4" cy="21.2" r="7.1" fill="#b31319"/><circle cx="20.4" cy="21.2" r="6.6" fill="#de1a22"/><circle cx="9.6" cy="19.6" r="2.1" fill="#fff" opacity="0.7"/><circle cx="18" cy="18.6" r="1.9" fill="#fff" opacity="0.65"/></svg>';
         return el;
+      }
+
+      function homeEl() {
+        const el = document.createElement("div");
+        el.className = "home-marker";
+        el.title = "Punto de partida";
+        el.setAttribute("aria-label", "Punto de partida");
+        el.innerHTML = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="#111111" d="M12 3.2 21 11.2h-2.2V20.5H14.1v-5.2h-4.2v5.2H5.2V11.2H3Z"/></svg>';
+        return el;
+      }
+
+      function homeOriginPoint() {
+        if (currentRoute && currentRoute.origin && currentRoute.origin.length >= 2) return currentRoute.origin;
+        if (currentRoute && currentRoute.shape && currentRoute.shape.length) return currentRoute.shape[0];
+        return START;
+      }
+
+      function hideHomeMarker() {
+        if (homeMarker) {
+          try { homeMarker.remove(); } catch (err) {}
+          homeMarker = null;
+        }
+      }
+
+      function syncHomeMarker() {
+        const active = !!(map && walk && walk.watching && !walk.complete);
+        if (!active) {
+          hideHomeMarker();
+          return;
+        }
+        const pt = homeOriginPoint();
+        if (!pt || !isFinite(Number(pt[0])) || !isFinite(Number(pt[1]))) {
+          hideHomeMarker();
+          return;
+        }
+        if (!homeMarker) {
+          homeMarker = new maplibregl.Marker({ element: homeEl(), anchor: "center", offset: [-30, 0] })
+            .setLngLat([Number(pt[1]), Number(pt[0])])
+            .addTo(map);
+        } else {
+          homeMarker.setLngLat([Number(pt[1]), Number(pt[0])]);
+        }
       }
 
       function distM(a, b) {
@@ -2708,9 +2845,11 @@
           geoWatch = null;
         }
         if (simTimer) { clearInterval(simTimer); simTimer = null; }
+        stopSim2();
         if (walk) walk.watching = false;
         releaseWake();
         document.body.classList.remove("walking");
+        syncHomeMarker();
         btnWalk.textContent = (walk && walk.progressM > 0 && !walk.complete) ? "Seguir caminata" : "Empezar caminata";
         btnWalk.disabled = false;
       }
@@ -2742,6 +2881,59 @@
         }, 100);
       }
 
+      function stopSim2() {
+        if (simRaf) {
+          cancelAnimationFrame(simRaf);
+          simRaf = 0;
+        }
+      }
+
+      function startSim2() {
+        stopSim2();
+        if (simTimer) { clearInterval(simTimer); simTimer = null; }
+        if (!walk || !walkTrack) {
+          setStatus("Todavía no hay una ruta para simular. Tocá Sugerir ruta.", true);
+          return;
+        }
+        const total = walkTrack.totalM;
+        const durationMs = 30000;
+        if (!(total > 0)) {
+          finishWalk(true);
+          return;
+        }
+        let last = performance.now();
+        function frame(now) {
+          if (!walk || walk.complete || !walk.watching) {
+            simRaf = 0;
+            return;
+          }
+          const dt = Math.max(0, Math.min(100, now - last));
+          last = now;
+          let speed = total / durationMs;
+          if (currentRoute && currentRoute.fruit) {
+            const here = pointAlongDistance(walkTrack, walk.progressM);
+            if (distM(here, currentRoute.fruit) <= FRUIT_PROX_M) {
+              speed = Math.min(speed, (FRUIT_PROX_M * 2) / 2500);
+            }
+          }
+          const next = Math.min(total, walk.progressM + speed * dt);
+          walk.progressM = next;
+          walk.kmWalked = next / 1000;
+          const pt = pointAlongDistance(walkTrack, next);
+          updateProgressVisuals();
+          maybeCherryPrompt(pt);
+          if (next >= total - 0.5) {
+            walk.progressM = total;
+            updateProgressVisuals();
+            simRaf = 0;
+            finishWalk(true);
+            return;
+          }
+          simRaf = requestAnimationFrame(frame);
+        }
+        simRaf = requestAnimationFrame(frame);
+      }
+
       function resetWalkForSim(route) {
         if (simTimer) { clearInterval(simTimer); simTimer = null; }
         hideCherryBanner();
@@ -2749,10 +2941,12 @@
         hideVictory();
         removeUserDot();
         document.body.classList.remove("walking");
+        stopSim2();
         walk = newWalkState();
         if (route || currentRoute) walk.routeSig = routeSig(route || currentRoute);
         try { localStorage.removeItem(WALK_KEY); } catch (err) {}
         saveWalk();
+        syncHomeMarker();
         if (mapStyleReady) updateProgressVisuals();
         btnWalk.textContent = "Empezar caminata";
         btnWalk.disabled = false;
@@ -2802,7 +2996,12 @@
         btnWalk.textContent = "Caminando…";
         btnWalk.disabled = true;
         saveWalk();
-        requestWake();
+        syncHomeMarker();
+        if (!SIM2) requestWake();
+        if (SIM2) {
+          startSim2();
+          return;
+        }
         if (SIM_MODE) {
           startSim();
           return;
@@ -2942,8 +3141,179 @@
         confettiRaf = requestAnimationFrame(frame);
       }
 
+      function destroyVictoryMap() {
+        victoryMapReady = false;
+        if (victoryMap) {
+          try { victoryMap.remove(); } catch (err) {}
+          victoryMap = null;
+        }
+        const el = document.getElementById("victory-map");
+        if (el) el.innerHTML = "";
+      }
+
+      function victoryLineGeo(pts) {
+        return {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "LineString",
+            coordinates: pts.map(function (p) { return [Number(p[1]), Number(p[0])]; })
+          }
+        };
+      }
+
+      function showVictorySnapshot(pts) {
+        const el = document.getElementById("victory-map");
+        if (!el) return false;
+        let url = "";
+        try {
+          if (map && map.getCanvas) url = map.getCanvas().toDataURL("image/png");
+        } catch (err) { url = ""; }
+        destroyVictoryMap();
+        if (url && url.length > 80 && url.indexOf("data:image") === 0) {
+          const img = document.createElement("img");
+          img.className = "victory-snap";
+          img.alt = "Recorrido";
+          img.src = url;
+          el.appendChild(img);
+          victoryMapReady = true;
+          return true;
+        }
+        if (pts && pts.length >= 2) {
+          el.innerHTML = routeThumbSvg(pts);
+          victoryMapReady = !!el.querySelector("svg");
+          return victoryMapReady;
+        }
+        return false;
+      }
+
+      function paintVictoryRoute(m, pts, fruit) {
+        if (!m || !pts || pts.length < 2) return;
+        const geo = victoryLineGeo(pts);
+        if (m.getSource("victory-route")) {
+          m.getSource("victory-route").setData(geo);
+        } else {
+          m.addSource("victory-route", { type: "geojson", data: geo });
+          m.addLayer({
+            id: "victory-casing",
+            type: "line",
+            source: "victory-route",
+            layout: { "line-cap": "round", "line-join": "round" },
+            paint: { "line-color": "#2121b0", "line-width": 5, "line-opacity": 0.96 }
+          });
+          m.addLayer({
+            id: "victory-stripe",
+            type: "line",
+            source: "victory-route",
+            layout: { "line-cap": "butt", "line-join": "round" },
+            paint: { "line-color": "#ffd54a", "line-width": 5, "line-dasharray": [2, 2], "line-opacity": 1 }
+          });
+        }
+        const start = pts[0];
+        const end = pts[pts.length - 1];
+        function inkDot() {
+          const d = document.createElement("div");
+          d.className = "victory-dot";
+          return d;
+        }
+        new maplibregl.Marker({ element: homeEl(), anchor: "center" })
+          .setLngLat([Number(start[1]), Number(start[0])])
+          .addTo(m);
+        if (distM(start, end) > 12) {
+          new maplibregl.Marker({ element: inkDot(), anchor: "center" })
+            .setLngLat([Number(end[1]), Number(end[0])])
+            .addTo(m);
+        }
+        const fr = fruit || (currentRoute && currentRoute.fruit);
+        if (fr && fr.length >= 2 && isFinite(Number(fr[0])) && isFinite(Number(fr[1]))) {
+          new maplibregl.Marker({ element: cherriesEl(), anchor: "center" })
+            .setLngLat([Number(fr[1]), Number(fr[0])])
+            .addTo(m);
+        }
+      }
+
+      function fitVictoryMap(m, pts, fruit) {
+        if (!m || !pts || pts.length < 2) return;
+        const b = new maplibregl.LngLatBounds();
+        pts.forEach(function (p) { b.extend([Number(p[1]), Number(p[0])]); });
+        if (fruit && fruit.length >= 2) b.extend([Number(fruit[1]), Number(fruit[0])]);
+        m.resize();
+        m.fitBounds(b, { padding: 32, duration: 0, maxZoom: 16, essential: true });
+      }
+
+      function mountVictoryMap(pts, fruit) {
+        const el = document.getElementById("victory-map");
+        if (!el || !pts || pts.length < 2 || typeof maplibregl === "undefined") {
+          showVictorySnapshot(pts);
+          return;
+        }
+        destroyVictoryMap();
+        let styleToUse = OFM_STYLE;
+        try {
+          if (typeof fallbackUsed !== "undefined" && fallbackUsed) styleToUse = FALLBACK_STYLE;
+        } catch (err) {}
+        let settled = false;
+        const failTimer = setTimeout(function () {
+          if (settled || !document.getElementById("victory-map")) return;
+          if (victoryMap && victoryMap.isStyleLoaded && victoryMap.isStyleLoaded()) return;
+          settled = true;
+          showVictorySnapshot(pts);
+        }, 4500);
+        try {
+          victoryMap = new maplibregl.Map({
+            container: el,
+            style: styleToUse,
+            center: [Number(pts[0][1]), Number(pts[0][0])],
+            zoom: 14,
+            interactive: false,
+            attributionControl: {
+              compact: true,
+              customAttribution: OSM_ATTR + ' © <a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a>'
+            },
+            preserveDrawingBuffer: true,
+            fadeDuration: 0,
+            pitchWithRotate: false,
+            dragRotate: false
+          });
+        } catch (err) {
+          clearTimeout(failTimer);
+          showVictorySnapshot(pts);
+          return;
+        }
+        function onReady() {
+          if (settled || !victoryMap) return;
+          settled = true;
+          clearTimeout(failTimer);
+          try {
+            paintVictoryRoute(victoryMap, pts, fruit);
+            fitVictoryMap(victoryMap, pts, fruit);
+            const attrib = el.querySelector(".maplibregl-ctrl-attrib");
+            if (attrib) attrib.classList.remove("maplibregl-compact-show");
+            victoryMapReady = true;
+            requestAnimationFrame(function () {
+              try { if (victoryMap) fitVictoryMap(victoryMap, pts, fruit); } catch (err) {}
+            });
+            setTimeout(function () {
+              try { if (victoryMap) fitVictoryMap(victoryMap, pts, fruit); } catch (err) {}
+            }, 220);
+          } catch (err) {
+            showVictorySnapshot(pts);
+          }
+        }
+        if (victoryMap.loaded && victoryMap.loaded()) onReady();
+        else victoryMap.once("load", onReady);
+        victoryMap.once("error", function () {
+          if (settled) return;
+          if (victoryMap && victoryMap.isStyleLoaded && victoryMap.isStyleLoaded()) return;
+          settled = true;
+          clearTimeout(failTimer);
+          showVictorySnapshot(pts);
+        });
+      }
+
       function hideVictory() {
         stopConfetti();
+        destroyVictoryMap();
         closeDialog(modalVictory);
         if (victoryPhotoUrl) {
           try { URL.revokeObjectURL(victoryPhotoUrl); } catch (err) {}
@@ -2953,6 +3323,8 @@
         if (img) img.removeAttribute("src");
         const fig = document.getElementById("victory-photo");
         if (fig) fig.hidden = true;
+        const media = document.getElementById("victory-media");
+        if (media) media.classList.remove("has-photo");
       }
 
       async function showVictory(opts) {
@@ -2961,7 +3333,6 @@
         const km = opts.km || 0;
         const timeEl = document.getElementById("victory-time");
         const distEl = document.getElementById("victory-dist");
-        const mapEl = document.getElementById("victory-map");
         if (timeEl) timeEl.textContent = fmtClockMs(dur);
         if (distEl) distEl.textContent = fmtKm(km);
         let pts = opts.shape;
@@ -2969,15 +3340,17 @@
           pts = walk.gpsTrack.map(function (g) { return [g.lat, g.lon]; });
         }
         if ((!pts || pts.length < 2) && currentRoute && currentRoute.shape) pts = currentRoute.shape;
-        if (mapEl) mapEl.innerHTML = routeThumbSvg(pts);
+        const fruit = opts.fruit || (currentRoute && currentRoute.fruit) || null;
         const fig = document.getElementById("victory-photo");
         const img = document.getElementById("victory-photo-img");
+        const media = document.getElementById("victory-media");
         if (victoryPhotoUrl) {
           try { URL.revokeObjectURL(victoryPhotoUrl); } catch (err) {}
           victoryPhotoUrl = null;
         }
         if (fig) fig.hidden = true;
         if (img) img.removeAttribute("src");
+        if (media) media.classList.remove("has-photo");
         const photoId = opts.photoId || (walk && walk.cherryPhotoId);
         if (photoId && img && fig) {
           try {
@@ -2986,12 +3359,16 @@
               victoryPhotoUrl = URL.createObjectURL(rec.blob);
               img.src = victoryPhotoUrl;
               fig.hidden = false;
+              if (media) media.classList.add("has-photo");
             }
           } catch (err) {}
         }
         hideCherryBanner();
         if (congratsBanner) congratsBanner.classList.remove("show");
         openDialog(modalVictory);
+        requestAnimationFrame(function () {
+          mountVictoryMap(pts, fruit);
+        });
         if (opts.confetti !== false) playConfetti();
       }
 
@@ -3064,6 +3441,7 @@
         walk = newWalkState();
         if (currentRoute) walk.routeSig = routeSig(currentRoute);
         saveWalk();
+        syncHomeMarker();
         updateProgressVisuals();
         btnWalk.textContent = "Empezar caminata";
         btnWalk.disabled = false;
@@ -3108,6 +3486,7 @@
           btnWalk.textContent = "Empezar caminata";
         }
         updateProgressVisuals();
+        syncHomeMarker();
       }
 
       function compressPhoto(file) {
@@ -3145,14 +3524,14 @@
           walk.cherryPhotoId = photoId;
           walkBanner.classList.remove("show");
           saveWalk();
-          if (SIM_MODE && walk.watching && !walk.complete) startSim();
+          if (SIM_MODE && !SIM2 && walk.watching && !walk.complete) startSim();
         } catch (err) {
           setStatus("No pude guardar la foto. Probá de nuevo.", true);
         }
       }
 
       document.addEventListener("visibilitychange", function () {
-        if (document.visibilityState === "visible" && walk && walk.watching && !walk.complete) requestWake();
+        if (document.visibilityState === "visible" && walk && walk.watching && !walk.complete && !SIM2) requestWake();
       });
 
       async function resetAllAppData() {
@@ -3776,6 +4155,26 @@
       };
       window.__setPickMode = setPickMode;
       window.__chooseMapPoint = chooseMapPoint;
+      window.__showVictory = showVictory;
+      window.__seedCherryPhoto = async function () {
+        const c = document.createElement("canvas");
+        c.width = 640; c.height = 400;
+        const g = c.getContext("2d");
+        g.fillStyle = "#f5f5f5"; g.fillRect(0, 0, 640, 400);
+        g.fillStyle = "#e31b23";
+        g.beginPath(); g.arc(250, 240, 70, 0, Math.PI * 2); g.fill();
+        g.beginPath(); g.arc(360, 230, 70, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = "#1f7a2c"; g.lineWidth = 8;
+        g.beginPath(); g.moveTo(300, 240); g.quadraticCurveTo(320, 80, 400, 70); g.stroke();
+        g.beginPath(); g.moveTo(300, 240); g.quadraticCurveTo(280, 90, 220, 70); g.stroke();
+        g.fillStyle = "#3bb343";
+        g.beginPath(); g.ellipse(430, 90, 50, 22, -0.5, 0, Math.PI * 2); g.fill();
+        const blob = await new Promise(function (res) { c.toBlob(res, "image/jpeg", 0.85); });
+        const id = "photo-test-" + Date.now();
+        await idbPut("photos", { id: id, createdAt: Date.now(), blob: blob });
+        if (walk) walk.cherryPhotoId = id;
+        return id;
+      };
       window.__camineTest = function () {
         const panel = document.getElementById("ui-panel");
         const eye = document.getElementById("btn-panel");
@@ -3834,12 +4233,20 @@
             };
           })(),
           simMode: !!SIM_MODE,
+          simLevel: SIM_LEVEL,
+          sim2: !!SIM2,
           appVersion: APP_VERSION,
+          homeOnMain: !!document.querySelector("#map .home-marker"),
+          homeOnVictory: !!document.querySelector("#victory-map .home-marker"),
           victoryOpen: !!(modalVictory && modalVictory.open && modalVictory.classList.contains("is-open")),
           victoryTitle: (document.getElementById("victory-title") && document.getElementById("victory-title").textContent),
           victoryTime: (document.getElementById("victory-time") && document.getElementById("victory-time").textContent),
           victoryDist: (document.getElementById("victory-dist") && document.getElementById("victory-dist").textContent),
-          victoryHasMap: !!(document.querySelector("#victory-map svg")),
+          victoryHasMap: !!(document.querySelector("#victory-map .maplibregl-canvas") || document.querySelector("#victory-map.maplibregl-map") || document.querySelector("#victory-map .victory-snap") || document.querySelector("#victory-map svg")),
+          victoryHasMaplibreglMap: !!(victoryMap && document.querySelector("#victory-map .maplibregl-canvas")),
+          victoryMapReady: !!victoryMapReady,
+          victoryHasStripe: !!(victoryMap && victoryMap.getLayer && victoryMap.getLayer("victory-stripe")),
+          victoryHasSnap: !!document.querySelector("#victory-map .victory-snap"),
           victoryHasPhoto: (function () {
             const fig = document.getElementById("victory-photo");
             return !!(fig && !fig.hidden && document.getElementById("victory-photo-img") && document.getElementById("victory-photo-img").getAttribute("src"));
