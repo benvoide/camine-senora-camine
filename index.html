@@ -34,6 +34,15 @@
       font-size: 0.8rem;
       line-height: 1.35;
     }
+    #btn-panel, #btn-panel-close {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      color: var(--ink);
+      cursor: pointer;
+    }
+    #btn-panel svg, #btn-panel-close svg { display: block; }
     #btn-panel {
       position: fixed;
       top: max(10px, env(safe-area-inset-top));
@@ -41,28 +50,38 @@
       z-index: 30;
       width: 44px;
       height: 44px;
-      padding: 0;
       border-radius: 12px;
       background: rgba(255, 252, 246, 0.84);
       backdrop-filter: blur(14px) saturate(1.15);
       -webkit-backdrop-filter: blur(14px) saturate(1.15);
-      color: var(--ink);
       border: 1px solid rgba(216, 208, 195, 0.75);
       box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
-      font-size: 1.2rem;
-      line-height: 1;
     }
     #btn-panel:hover { filter: none; background: rgba(255, 252, 246, 0.95); }
+    body.panel-open #btn-panel { display: none; }
+    #btn-panel-close {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      z-index: 1;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+    }
+    #btn-panel-close:hover { filter: none; background: rgba(29, 26, 22, 0.08); }
     #ui-panel {
       display: none;
       position: fixed;
-      top: calc(max(10px, env(safe-area-inset-top)) + 54px);
+      top: max(10px, env(safe-area-inset-top));
       left: max(10px, env(safe-area-inset-left));
       z-index: 29;
       width: min(400px, calc(100vw - 72px));
-      max-height: min(70vh, calc(100dvh - 78px - env(safe-area-inset-bottom)));
+      max-height: min(72vh, calc(100dvh - 24px - env(safe-area-inset-bottom)));
       overflow: auto;
-      padding: 12px 14px 14px;
+      padding: 12px 44px 14px 14px;
       border-radius: 16px;
       background: rgba(255, 252, 246, 0.78);
       backdrop-filter: blur(16px) saturate(1.2);
@@ -267,8 +286,8 @@
       .lead { margin-bottom: 6px; font-size: 0.75rem; }
       #ui-panel {
         width: calc(100vw - 20px - 54px);
-        max-height: min(46vh, calc(100dvh - 72px - env(safe-area-inset-bottom)));
-        padding: 10px 11px 11px;
+        max-height: min(48vh, calc(100dvh - 24px - env(safe-area-inset-bottom)));
+        padding: 10px 40px 11px 11px;
         border-radius: 14px;
       }
       .actions button, .btn-secondary, .btn-ghost {
@@ -282,8 +301,9 @@
   </style>
 </head>
 <body>
-  <button type="button" id="btn-panel" aria-controls="ui-panel" aria-expanded="false" aria-label="Mostrar menú">☰</button>
+  <button type="button" id="btn-panel" aria-controls="ui-panel" aria-expanded="false" aria-label="Mostrar menú" title="Mostrar menú"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
   <section id="ui-panel" aria-label="Menú">
+    <button type="button" id="btn-panel-close" aria-controls="ui-panel" aria-expanded="false" aria-label="Ocultar menú" title="Ocultar menú"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     <h1>Camine, señora, camine</h1>
     <p class="lead">Vueltas a pie desde el Teatro Municipal (Alsina 425).</p>
     <form id="form">
@@ -789,10 +809,10 @@
 
       function setPanelOpen(open, persist) {
         document.body.classList.toggle("panel-open", !!open);
-        const b = document.getElementById("btn-panel");
-        b.setAttribute("aria-expanded", open ? "true" : "false");
-        b.setAttribute("aria-label", open ? "Ocultar menú" : "Mostrar menú");
-        b.textContent = open ? "✕" : "☰";
+        const eye = document.getElementById("btn-panel");
+        const close = document.getElementById("btn-panel-close");
+        eye.setAttribute("aria-expanded", open ? "true" : "false");
+        close.setAttribute("aria-expanded", open ? "true" : "false");
         if (persist !== false) {
           try { localStorage.setItem(PANEL_KEY, open ? "open" : "closed"); } catch (err) {}
         }
@@ -812,7 +832,10 @@
       setPanelOpen(loadPanelOpen(), false);
 
       document.getElementById("btn-panel").addEventListener("click", function () {
-        setPanelOpen(!document.body.classList.contains("panel-open"));
+        setPanelOpen(true);
+      });
+      document.getElementById("btn-panel-close").addEventListener("click", function () {
+        setPanelOpen(false);
       });
       document.getElementById("km-presets").addEventListener("click", function (ev) {
         const chip = ev.target.closest(".chip");
@@ -979,7 +1002,7 @@
       function fitPadding() {
         const panel = document.getElementById("ui-panel");
         const open = document.body.classList.contains("panel-open") && panel;
-        const top = open ? Math.min(panel.offsetHeight + 70, Math.max(120, window.innerHeight * 0.42)) : 56;
+        const top = open ? Math.min(panel.offsetHeight + 24, Math.max(120, window.innerHeight * 0.42)) : 56;
         return { top: top, left: 16, right: 52, bottom: 36 };
       }
 
@@ -1983,8 +2006,11 @@
 
       window.__camineTest = function () {
         const panel = document.getElementById("ui-panel");
-        const toggle = document.getElementById("btn-panel");
+        const eye = document.getElementById("btn-panel");
+        const close = document.getElementById("btn-panel-close");
         const cs = panel ? window.getComputedStyle(panel) : null;
+        const eyeCs = eye ? window.getComputedStyle(eye) : null;
+        const closeCs = close ? window.getComputedStyle(close) : null;
         return {
           km: getTargetKm(),
           preset: prefs.preset,
@@ -1993,8 +2019,15 @@
           title: document.title,
           panelOpen: document.body.classList.contains("panel-open"),
           panelVisible: !!(cs && cs.display !== "none" && cs.visibility !== "hidden"),
-          toggleLabel: toggle && toggle.getAttribute("aria-label"),
-          toggleText: toggle && toggle.textContent,
+          eyeVisible: !!(eyeCs && eyeCs.display !== "none" && eyeCs.visibility !== "hidden"),
+          closeVisible: !!(closeCs && closeCs.display !== "none" && closeCs.visibility !== "hidden" && cs && cs.display !== "none"),
+          eyeLabel: eye && eye.getAttribute("aria-label"),
+          eyeTitle: eye && eye.getAttribute("title"),
+          closeLabel: close && close.getAttribute("aria-label"),
+          closeTitle: close && close.getAttribute("title"),
+          hasEyeSvg: !!(eye && eye.querySelector("svg")),
+          hasCloseSvg: !!(close && close.querySelector("svg")),
+          hasHamburger: /☰/.test((eye && eye.textContent) || "") || /☰/.test(document.body.innerText),
           h1: document.querySelector("h1") && document.querySelector("h1").innerText,
           hasFormaUI: !!document.getElementById("forma-presets")
         };
