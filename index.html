@@ -338,26 +338,35 @@
 
     .home-marker {
       width: 28px;
-      height: 28px;
-      display: grid;
-      place-items: center;
-      background: #ffffff;
-      border: 1.5px solid #111111;
-      box-sizing: border-box;
+      height: 36px;
+      display: block;
+      background: none;
+      border: 0;
+      padding: 0;
+      line-height: 0;
       pointer-events: none;
     }
     .home-marker svg {
       display: block;
-      width: 16px;
-      height: 16px;
+      width: 28px;
+      height: 36px;
     }
-    #victory-map .home-marker { width: 24px; height: 24px; }
-    #victory-map .home-marker svg { width: 14px; height: 14px; }
+    #victory-map .home-marker { width: 22px; height: 28px; }
+    #victory-map .home-marker svg { width: 22px; height: 28px; }
 
-    .origin-label-marker { pointer-events: none; z-index: 1; }
+    .origin-label-marker {
+      pointer-events: none;
+      z-index: 1;
+      width: max-content;
+      max-width: 220px;
+      display: flex;
+      justify-content: center;
+      line-height: 0;
+    }
     .origin-flag {
-      display: inline-block;
-      max-width: 200px;
+      display: block;
+      max-width: 220px;
+      margin: 0;
       padding: 4px 12px;
       background: rgba(255, 255, 255, 0.94);
       color: var(--ink);
@@ -366,6 +375,7 @@
       font-size: 12px;
       font-weight: 500;
       line-height: 1.5;
+      text-align: center;
       border-radius: var(--radius-full);
       box-shadow: none;
       white-space: nowrap;
@@ -1031,7 +1041,7 @@
       <div id="loc-results"></div>
       <div class="loc-actions">
         <button type="button" id="loc-geo" class="btn-secondary">Usar mi ubicación actual</button>
-        <button type="button" id="loc-bb" class="btn-ghost">Volver al Teatro (Bahía Blanca)</button>
+        <button type="button" id="loc-bb" class="btn-ghost">Volver a Bahía Blanca</button>
         <button type="button" id="loc-cancel" class="btn-ghost">Cerrar</button>
       </div>
     </div>
@@ -1124,7 +1134,7 @@
 
 
   <script>
-    const APP_VERSION = "18";
+    const APP_VERSION = "19";
     function applyAppVersion() {
       document.querySelectorAll("[data-app-version]").forEach(function (el) {
         el.textContent = "v" + APP_VERSION;
@@ -1185,11 +1195,11 @@
     }
 
     function initApp() {
-      const TEATRO = [-38.714775, -62.260133];
-      const TEATRO_NAME = "Teatro Municipal (Alsina 425)";
+      const BB_ORIGIN = [-38.714775, -62.260133];
+      const BB_NAME = "Bahía Blanca";
       const BB_RADIUS_M = 12000;
-      let START = [TEATRO[0], TEATRO[1]];
-      let originName = TEATRO_NAME;
+      let START = [BB_ORIGIN[0], BB_ORIGIN[1]];
+      let originName = BB_NAME;
       let originIsBB = true;
       const VALHALLA_URL = "https://valhalla1.openstreetmap.de/route";
       const OSRM_URL = "https://routing.openstreetmap.de/routed-foot/route/v1/foot";
@@ -1288,6 +1298,7 @@
       if (SIM_MODE) {
         try { localStorage.removeItem(WALK_KEY); } catch (err) {}
       }
+      migrateStoredOriginNames();
       const GREENS_KEY = "camine-senora-camine.greens";
       const DB_NAME = "camine-senora-camine";
       const SNAP_MAX_M = 40;
@@ -1416,19 +1427,48 @@
         return el;
       }
 
+      function isLegacyOriginName(name) {
+        return /teatro|alsina\s*425/i.test(String(name || ""));
+      }
+
+      function canonicalizeOriginName(name) {
+        const raw = String(name || "").trim();
+        if (!raw) return raw;
+        if (isLegacyOriginName(raw)) return BB_NAME;
+        return raw;
+      }
+
+      function migrateStoredOriginNames() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return;
+          const data = JSON.parse(raw);
+          if (data && isLegacyOriginName(data.originName)) {
+            data.originName = BB_NAME;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+          }
+        } catch (err) {}
+      }
+
+      function routeStartPoint(route) {
+        const src = route || currentRoute;
+        if (walkTrack && walkTrack.shape && walkTrack.shape.length) return walkTrack.shape[0];
+        if (src && src.shape && src.shape.length) return src.shape[0];
+        if (src && src.origin && src.origin.length >= 2) return src.origin;
+        return START;
+      }
+
       function homeEl() {
         const el = document.createElement("div");
         el.className = "home-marker";
         el.title = "Punto de partida";
         el.setAttribute("aria-label", "Punto de partida");
-        el.innerHTML = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path fill="#111111" d="M12 3.2 21 11.2h-2.2V20.5H14.1v-5.2h-4.2v5.2H5.2V11.2H3Z"/></svg>';
+        el.innerHTML = '<svg viewBox="0 0 28 36" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="0.75" y="0.75" width="26.5" height="26.5" fill="#ffffff" stroke="#111111" stroke-width="1.5"/><path fill="#111111" d="M14 6.1 21.6 12.9h-1.8V20.8h-3.7v-4.3h-4.2v4.3H8.2V12.9H6.4Z"/><path fill="#111111" d="M8.2 27.2 14 36 19.8 27.2Z"/></svg>';
         return el;
       }
 
       function homeOriginPoint() {
-        if (currentRoute && currentRoute.origin && currentRoute.origin.length >= 2) return currentRoute.origin;
-        if (currentRoute && currentRoute.shape && currentRoute.shape.length) return currentRoute.shape[0];
-        return START;
+        return routeStartPoint();
       }
 
       function hideHomeMarker() {
@@ -1450,7 +1490,7 @@
           return;
         }
         if (!homeMarker) {
-          homeMarker = new maplibregl.Marker({ element: homeEl(), anchor: "center", offset: [-30, 0] })
+          homeMarker = new maplibregl.Marker({ element: homeEl(), anchor: "bottom" })
             .setLngLat([Number(pt[1]), Number(pt[0])])
             .addTo(map);
         } else {
@@ -1626,14 +1666,14 @@
       function placeOriginLabel(route) {
         if (!map) return;
         const src = route || currentRoute;
-        const pt = (src && src.origin) || START;
-        const label = (src && src.originName) || originName;
+        const pt = routeStartPoint(src);
+        const label = canonicalizeOriginName((src && src.originName) || originName) || BB_NAME;
         if (originMarker) {
           originMarker.remove();
           originMarker = null;
         }
-        originMarker = new maplibregl.Marker({ element: originLabelEl(label), anchor: "bottom", offset: [0, -22] })
-          .setLngLat([pt[1], pt[0]])
+        originMarker = new maplibregl.Marker({ element: originLabelEl(label), anchor: "bottom", offset: [0, -42] })
+          .setLngLat([Number(pt[1]), Number(pt[0])])
           .addTo(map);
       }
 
@@ -1823,7 +1863,7 @@
         },
         {
           title: "Elegir punto de partida",
-          body: "Tocá el mapa para marcar desde dónde largás, o buscá un lugar / usá tu ubicación. Si no elegís nada, se parte del Teatro Municipal de Bahía Blanca."
+          body: "Tocá el mapa para marcar desde dónde largás, o buscá un lugar / usá tu ubicación. Si no elegís nada, se parte de Bahía Blanca."
         },
         {
           title: "Empezar caminata",
@@ -1966,7 +2006,7 @@
 
       function applyOriginName(lat, lon, name) {
         if (Math.abs(START[0] - lat) > 1e-7 || Math.abs(START[1] - lon) > 1e-7) return;
-        originName = name || "Punto de partida";
+        originName = canonicalizeOriginName(name || "Punto de partida") || "Punto de partida";
         if (currentRoute) currentRoute.originName = originName;
         placeOriginLabel();
       }
@@ -2007,8 +2047,8 @@
 
       async function changeOrigin(lat, lon, name) {
         START = [lat, lon];
-        originName = name || (lat.toFixed(5) + ", " + lon.toFixed(5));
-        originIsBB = distM(START, TEATRO) <= BB_RADIUS_M;
+        originName = canonicalizeOriginName(name || (lat.toFixed(5) + ", " + lon.toFixed(5))) || (lat.toFixed(5) + ", " + lon.toFixed(5));
+        originIsBB = distM(START, BB_ORIGIN) <= BB_RADIUS_M;
         updateOriginLabel();
         try { localStorage.removeItem(SECTORS_KEY); } catch (err) {}
         greensReady = null;
@@ -2048,7 +2088,7 @@
         }
       });
       document.getElementById("loc-bb").addEventListener("click", function () {
-        changeOrigin(TEATRO[0], TEATRO[1], TEATRO_NAME);
+        changeOrigin(BB_ORIGIN[0], BB_ORIGIN[1], BB_NAME);
       });
       document.getElementById("loc-geo").addEventListener("click", function () {
         if (!navigator.geolocation) {
@@ -2207,10 +2247,10 @@
         return true;
       }
 
-      function routeStartsAtTeatro(data) {
+      function routeStartsAtDefault(data) {
         const pt = (data && data.origin && isPoint(data.origin)) ? data.origin
           : (data && data.shape && isPoint(data.shape[0]) ? data.shape[0] : null);
-        return pt && distM(pt, TEATRO) <= 200;
+        return pt && distM(pt, BB_ORIGIN) <= 200;
       }
 
       function loadSavedRoute() {
@@ -2218,7 +2258,11 @@
           const raw = localStorage.getItem(STORAGE_KEY);
           if (!raw) return null;
           const data = JSON.parse(raw);
-          if (!validRoute(data) || !routeStartsAtTeatro(data)) return null;
+          if (!validRoute(data) || !routeStartsAtDefault(data)) return null;
+          if (isLegacyOriginName(data.originName)) {
+            data.originName = BB_NAME;
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (err) {}
+          }
           return data;
         } catch (err) {
           return null;
@@ -2276,7 +2320,7 @@
             pacmanDeg: routeBearing(result.shape) - 90,
             maps: googleMapsUrl(result.waypoints),
             origin: [START[0], START[1]],
-            originName: originName
+            originName: canonicalizeOriginName(originName) || originName
           };
           applyRoute(route, fromUser);
           saveRoute(route);
@@ -2495,7 +2539,7 @@
               return greensList;
             }
           } catch (err) {}
-          const list = await fetchOverpassGreens(TEATRO[0], TEATRO[1]);
+          const list = await fetchOverpassGreens(BB_ORIGIN[0], BB_ORIGIN[1]);
           if (list.length >= 5) {
             greensList = mergeGreens(GREEN_FALLBACK, list);
             try { localStorage.setItem(GREENS_KEY, JSON.stringify({ ts: Date.now(), greens: greensList })); } catch (err) {}
@@ -3216,7 +3260,7 @@
           d.className = "victory-dot";
           return d;
         }
-        new maplibregl.Marker({ element: homeEl(), anchor: "center" })
+        new maplibregl.Marker({ element: homeEl(), anchor: "bottom" })
           .setLngLat([Number(start[1]), Number(start[0])])
           .addTo(m);
         if (distM(start, end) > 12) {
@@ -3398,7 +3442,7 @@
           formaLabel: currentRoute.formaLabel || null,
           idealShape: currentRoute.idealShape || null,
           origin: currentRoute.origin || [START[0], START[1]],
-          originName: currentRoute.originName || originName
+          originName: canonicalizeOriginName(currentRoute.originName || originName) || originName
         };
         try { await idbPut("walks", rec); } catch (err) {}
         return rec;
@@ -3680,7 +3724,7 @@
           const badge = w.complete ? "<span class='badge ok'>Completa</span>" : "<span class='badge no'>Incompleta</span>";
           item.innerHTML = "<div><div><strong>" + dateLabel(w.createdAt || w.endedAt) + "</strong> " + badge +
             "</div><div class='hist-meta'>" + km + " km · " + fmtDurationMs(w.durationMs) +
-            (w.originName ? " · " + escapeHtml(w.originName) : "") + "</div></div>";
+            (w.originName ? " · " + escapeHtml(canonicalizeOriginName(w.originName) || w.originName) : "") + "</div></div>";
           if (w.photoId) {
             try {
               const ph = await idbGet("photos", w.photoId);
@@ -3711,7 +3755,7 @@
         box.innerHTML = "<div><strong>" + dateLabel(w.createdAt || w.endedAt) + "</strong> " + badge +
           "</div><div class='hist-meta'>" + km + " km caminados · " + fmtDurationMs(w.durationMs) +
           (w.kmPlanned ? " · ruta de " + fmtKm(w.kmPlanned) : "") +
-          (w.originName ? " · " + escapeHtml(w.originName) : "") + "</div>" +
+          (w.originName ? " · " + escapeHtml(canonicalizeOriginName(w.originName) || w.originName) : "") + "</div>" +
           "<div class='modal-actions'><button type='button' id='hist-showmap'>Ver en el mapa</button>" +
           "<button type='button' id='hist-del' class='btn-ghost'>Borrar</button></div>";
         if (w.photoId) {
@@ -3758,7 +3802,7 @@
           formaLabel: w.formaLabel || null,
           idealShape: w.idealShape || null,
           origin: w.origin || (w.shape && w.shape[0]) || START,
-          originName: w.originName || "Inicio"
+          originName: canonicalizeOriginName(w.originName) || w.originName || "Inicio"
         };
         drawRoute(route);
         if (w.gpsTrack && w.gpsTrack.length && map.getSource("walk-gps")) {
@@ -4155,6 +4199,46 @@
       };
       window.__setPickMode = setPickMode;
       window.__chooseMapPoint = chooseMapPoint;
+      window.__camineJumpStart = function (zoom) {
+        const pt = routeStartPoint();
+        if (!map || !pt) return null;
+        map.jumpTo({ center: [Number(pt[1]), Number(pt[0])], zoom: zoom == null ? 17.6 : zoom, essential: true });
+        map.resize();
+        return { lat: Number(pt[0]), lon: Number(pt[1]) };
+      };
+      window.__camineStartAlign = function () {
+        const pt = routeStartPoint();
+        const origin = (currentRoute && currentRoute.origin) || START;
+        const shape0 = currentRoute && currentRoute.shape && currentRoute.shape[0];
+        const mapEl = document.getElementById("map");
+        const mr = mapEl.getBoundingClientRect();
+        const proj = map.project([Number(pt[1]), Number(pt[0])]);
+        const px = { x: mr.left + proj.x, y: mr.top + proj.y };
+        const house = document.querySelector("#map .home-marker");
+        const flag = document.querySelector("#map .origin-flag");
+        const wrap = document.querySelector("#map .origin-label-marker");
+        function box(el) {
+          if (!el) return null;
+          const r = el.getBoundingClientRect();
+          return { x: r.left, y: r.top, w: r.width, h: r.height, cx: r.left + r.width/2, cy: r.top + r.height/2, bottom: r.bottom };
+        }
+        const h = box(house), f = box(flag), w = box(wrap);
+        return {
+          pt: pt,
+          origin: origin,
+          shape0: shape0,
+          originDistM: (origin && pt) ? distM(pt, origin) : null,
+          px: px,
+          house: h,
+          flag: f,
+          wrap: w,
+          dxHouse: h ? Math.round(h.cx - px.x) : null,
+          dyHouseTip: h ? Math.round(h.bottom - px.y) : null,
+          dxFlag: f ? Math.round(f.cx - px.x) : null,
+          flagText: flag && flag.textContent,
+          textAlign: flag && getComputedStyle(flag).textAlign
+        };
+      };
       window.__showVictory = showVictory;
       window.__seedCherryPhoto = async function () {
         const c = document.createElement("canvas");
