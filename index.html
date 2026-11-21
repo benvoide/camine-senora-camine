@@ -620,7 +620,7 @@
       display: none;
       position: fixed;
       left: 50%;
-      bottom: max(16px, env(safe-area-inset-bottom));
+      bottom: max(40px, calc(env(safe-area-inset-bottom) + 28px));
       z-index: 28;
       max-width: min(440px, calc(100vw - 24px));
       padding: 12px 16px;
@@ -659,6 +659,26 @@
       font-weight: 500;
     }
     #pick-cancel:hover { filter: none; background: none; color: var(--ink); }
+
+    #sim-chip {
+      display: none;
+      position: fixed;
+      left: max(12px, env(safe-area-inset-left));
+      bottom: max(16px, env(safe-area-inset-bottom));
+      z-index: 32;
+      padding: 6px 12px;
+      background: var(--ink);
+      color: var(--on-primary);
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      line-height: 1.2;
+      border-radius: var(--radius-full);
+      box-shadow: none;
+      pointer-events: none;
+    }
+    body.sim-mode #sim-chip { display: block; }
 
     #reset-same {
       background: var(--ink);
@@ -861,6 +881,7 @@
     <span>Tocá el mapa para elegir el punto de partida</span>
     <button type="button" id="pick-cancel" class="btn-ghost">Cancelar</button>
   </div>
+  <div id="sim-chip" title="Tocá Empezar caminata para simular el recorrido">MODO SIM</div>
 
   <dialog class="modal" id="modal-reset">
     <div class="modal-body">
@@ -1005,8 +1026,26 @@
       let prefs = { preset: "7", km: 7 };
 
 
-      const SIM_MODE = /(?:\?|&)sim=1(?:&|$)/.test(location.search);
+      function readSimFlag() {
+        function fromParams(params) {
+          let val = null;
+          params.forEach(function (v, k) {
+            if (String(k).toLowerCase() === "sim") val = v;
+          });
+          if (val === null) return false;
+          const s = String(val).trim().toLowerCase().replace(/\/+$/, "");
+          return s === "" || s === "1" || s === "true" || s === "yes" || s === "on";
+        }
+        try {
+          if (fromParams(new URLSearchParams(location.search))) return true;
+          const hash = String(location.hash || "").replace(/^#/, "").replace(/^[/?]+/, "");
+          if (hash && fromParams(new URLSearchParams(hash))) return true;
+        } catch (err) {}
+        return false;
+      }
+      const SIM_MODE = readSimFlag();
       if (SIM_MODE) {
+        document.body.classList.add("sim-mode");
         window.__walkDebug = function () {
           return {
             progressM: walk ? walk.progressM : 0,
@@ -2329,8 +2368,12 @@
             type: "line",
             source: "walk-progress",
             layout: { "line-cap": "round", "line-join": "round" },
-            paint: { "line-color": "#c8c8c8", "line-width": 9, "line-opacity": 0.92 }
+            paint: { "line-color": "#3a3a3a", "line-width": 10, "line-opacity": 1 }
           });
+        } else {
+          map.setPaintProperty("walk-progress", "line-color", "#3a3a3a");
+          map.setPaintProperty("walk-progress", "line-width", 10);
+          map.setPaintProperty("walk-progress", "line-opacity", 1);
         }
         if (!map.getSource("walk-gps")) {
           map.addSource("walk-gps", { type: "geojson", data: emptyLine() });
@@ -2339,8 +2382,12 @@
             type: "line",
             source: "walk-gps",
             layout: { "line-cap": "round", "line-join": "round" },
-            paint: { "line-color": "#ff8a1d", "line-width": 3.5, "line-opacity": 0.85 }
+            paint: { "line-color": "#3a3a3a", "line-width": 8, "line-opacity": 1 }
           });
+        } else {
+          map.setPaintProperty("walk-gps", "line-color", "#3a3a3a");
+          map.setPaintProperty("walk-gps", "line-width", 8);
+          map.setPaintProperty("walk-gps", "line-opacity", 1);
         }
       }
 
@@ -3393,9 +3440,18 @@
               ids: names.filter(function (id) { return /route|walk-/.test(id); }),
               hasDots: names.indexOf("route-dots") !== -1,
               casing: info("route-casing"),
-              stripe: info("route-stripe")
+              stripe: info("route-stripe"),
+              progress: info("walk-progress"),
+              gps: info("walk-gps")
             };
           })(),
+          simMode: !!SIM_MODE,
+          simChip: (function () {
+            const el = document.getElementById("sim-chip");
+            const cs = el && window.getComputedStyle(el);
+            return !!(el && cs && cs.display !== "none" && document.body.classList.contains("sim-mode"));
+          })(),
+          simChipText: (document.getElementById("sim-chip") && document.getElementById("sim-chip").textContent),
           locBox: document.getElementById("loc-box").classList.contains("show"),
           locBtn: !!(document.getElementById("btn-loc")),
           locBtnLabel: (document.getElementById("btn-loc") && document.getElementById("btn-loc").textContent),
