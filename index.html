@@ -4,42 +4,66 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Camine, señora, camine - Generador de rutas al azar en Bahía Blanca</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&family=Grandstander:wght@500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #f3efe6;
-      --ink: #1d1a16;
-      --muted: #5e574c;
-      --line: #d8d0c3;
-      --card: #fffcf6;
-      --accent: #215c3a;
-      --accent-ink: #fff;
-      --err: #8a2b1e;
+      --navy: #12163a;
+      --navy-deep: #0a0d24;
+      --yellow: #ffd100;
+      --yellow-deep: #c9a400;
+      --cream: #fff3c2;
+      --muted: #c9c29a;
+      --cherry: #e31b23;
+      --cyan: #3ee0e0;
+      --maze: #2121b0;
+      --ink: #fff3c2;
+      --err: #ff8b8b;
+      --accent: #ffd100;
+      --accent-ink: #12163a;
+      --card: #161b42;
+      --bg: #12163a;
+      --line: rgba(255, 209, 0, 0.34);
+      --panel: rgba(12, 16, 46, 0.90);
+      --font-display: "Grandstander", "Trebuchet MS", "Segoe UI", sans-serif;
+      --font-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; height: 100%; overflow: hidden; }
     body {
-      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      font-family: var(--font-body);
       background: var(--bg);
       color: var(--ink);
     }
     h1 {
       margin: 0 0 2px;
-      font-size: 1.08rem;
-      font-weight: 650;
-      line-height: 1.25;
+      font-family: var(--font-display);
+      font-size: 1.18rem;
+      font-weight: 750;
+      line-height: 1.15;
+      letter-spacing: -0.01em;
+      color: var(--cream);
     }
     .lead {
-      margin: 0 0 8px;
+      margin: 0 0 10px;
       color: var(--muted);
-      font-size: 0.8rem;
+      font-size: 0.82rem;
       line-height: 1.35;
     }
+    :focus-visible {
+      outline: 2px solid var(--yellow);
+      outline-offset: 2px;
+    }
+    button:focus:not(:focus-visible),
+    input:focus:not(:focus-visible) { outline: none; }
+
     #btn-panel, #btn-panel-close {
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 0;
-      color: var(--ink);
+      color: var(--cream);
       cursor: pointer;
     }
     #btn-panel svg, #btn-panel-close svg { display: block; }
@@ -50,14 +74,14 @@
       z-index: 30;
       width: 44px;
       height: 44px;
-      border-radius: 12px;
-      background: rgba(255, 252, 246, 0.84);
-      backdrop-filter: blur(14px) saturate(1.15);
-      -webkit-backdrop-filter: blur(14px) saturate(1.15);
-      border: 1px solid rgba(216, 208, 195, 0.75);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+      border-radius: 10px;
+      background: var(--panel);
+      backdrop-filter: blur(16px) saturate(1.2);
+      -webkit-backdrop-filter: blur(16px) saturate(1.2);
+      border: 1px solid var(--line);
+      box-shadow: 0 8px 24px rgba(8, 10, 28, 0.45);
     }
-    #btn-panel:hover { filter: none; background: rgba(255, 252, 246, 0.95); }
+    #btn-panel:hover { filter: none; background: rgba(18, 22, 58, 0.96); color: var(--yellow); }
     body.panel-open #btn-panel { display: none; }
     #btn-panel-close {
       position: absolute;
@@ -66,12 +90,14 @@
       z-index: 1;
       width: 36px;
       height: 36px;
-      border-radius: 10px;
+      min-height: 36px;
+      border-radius: 8px;
       background: transparent;
       border: 0;
       box-shadow: none;
+      color: var(--cream);
     }
-    #btn-panel-close:hover { filter: none; background: rgba(29, 26, 22, 0.08); }
+    #btn-panel-close:hover { filter: none; background: rgba(255, 209, 0, 0.14); color: var(--yellow); }
     #ui-panel {
       display: none;
       position: fixed;
@@ -81,20 +107,29 @@
       width: min(400px, calc(100vw - 72px));
       max-height: min(72vh, calc(100dvh - 24px - env(safe-area-inset-bottom)));
       overflow: auto;
-      padding: 12px 44px 14px 14px;
-      border-radius: 16px;
-      background: rgba(255, 252, 246, 0.78);
-      backdrop-filter: blur(16px) saturate(1.2);
-      -webkit-backdrop-filter: blur(16px) saturate(1.2);
-      border: 1px solid rgba(255, 255, 255, 0.5);
-      box-shadow: 0 10px 32px rgba(0, 0, 0, 0.2);
+      padding: 14px 44px 12px 14px;
+      border-radius: 14px;
+      background: var(--panel);
+      backdrop-filter: blur(18px) saturate(1.25);
+      -webkit-backdrop-filter: blur(18px) saturate(1.25);
+      border: 1px solid var(--line);
+      box-shadow: 0 12px 36px rgba(8, 10, 28, 0.5), inset 0 3px 0 var(--yellow);
     }
-    body.panel-open #ui-panel { display: block; }
+    body.panel-open #ui-panel { display: block; animation: cabinet-in 0.28s ease-out; }
+    @keyframes cabinet-in {
+      from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+      to { opacity: 1; transform: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      body.panel-open #ui-panel { animation: none; }
+    }
+
     form {
       display: flex;
-      flex-wrap: wrap;
-      gap: 8px 10px;
-      align-items: end;
+      flex-direction: column;
+      flex-wrap: nowrap;
+      gap: 10px;
+      align-items: stretch;
     }
     label {
       display: flex;
@@ -103,41 +138,73 @@
       font-size: 0.8rem;
       color: var(--muted);
     }
-    input[type="number"] {
+    input[type="number"],
+    input[type="search"] {
       width: 7.2rem;
       padding: 8px 10px;
       border: 1px solid var(--line);
-      border-radius: 6px;
+      border-radius: 8px;
       font: inherit;
-      color: var(--ink);
-      background: #fff;
+      color: var(--cream);
+      background: rgba(10, 13, 36, 0.72);
     }
+    input[type="number"]:focus-visible,
+    input[type="search"]:focus-visible {
+      border-color: var(--yellow);
+    }
+
     button {
-      background: var(--accent);
-      color: var(--accent-ink);
-      border: 0;
-      border-radius: 6px;
-      padding: 9px 16px;
-      font: inherit;
+      background: transparent;
+      color: var(--cream);
+      border: 1px solid rgba(255, 243, 194, 0.32);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-family: var(--font-display);
+      font-size: 0.88rem;
       font-weight: 600;
       cursor: pointer;
     }
-    button:hover { filter: brightness(1.06); }
-    button:disabled { opacity: 0.6; cursor: default; filter: none; }
+    button:hover { filter: none; background: rgba(255, 243, 194, 0.08); }
+    button:disabled { opacity: 0.55; cursor: default; filter: none; }
+
+    #btn {
+      width: 100%;
+      min-height: 52px;
+      margin-top: 2px;
+      padding: 12px 16px;
+      font-family: var(--font-display);
+      font-size: 1.18rem;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      line-height: 1;
+      background: var(--yellow);
+      color: var(--navy);
+      border: 0;
+      border-radius: 10px;
+      box-shadow: 0 2px 0 var(--yellow-deep), 0 8px 18px rgba(255, 209, 0, 0.28);
+    }
+    #btn:hover { filter: none; background: #ffe34a; }
+    #btn:disabled {
+      opacity: 0.65;
+      box-shadow: none;
+    }
+
     #status {
-      margin-top: 8px;
+      margin-top: 10px;
       font-size: 0.88rem;
       min-height: 1.2em;
       line-height: 1.4;
+      color: var(--cream);
     }
     #status.error { color: var(--err); }
-    #status a { color: var(--accent); font-weight: 600; }
+    #status a { color: var(--yellow); font-weight: 700; }
+
     #map {
       position: fixed;
       inset: 0;
       width: 100%;
       height: 100%;
-      background: #ddd;
+      background: #d8dde3;
     }
     .maplibregl-ctrl-top-right {
       top: max(8px, env(safe-area-inset-top));
@@ -147,7 +214,38 @@
       bottom: max(8px, env(safe-area-inset-bottom));
       right: max(8px, env(safe-area-inset-right));
     }
-    .maplibregl-popup-content { font-family: inherit; font-size: 0.9rem; }
+    .maplibregl-ctrl-group {
+      background: rgba(12, 16, 46, 0.9) !important;
+      border: 1px solid var(--line);
+      box-shadow: 0 6px 16px rgba(8, 10, 28, 0.35);
+      overflow: hidden;
+    }
+    .maplibregl-ctrl-group button {
+      background: transparent !important;
+      filter: invert(1) sepia(0.3) saturate(2) hue-rotate(10deg) brightness(1.3);
+      min-height: 0;
+      border-radius: 0;
+      border: 0;
+      box-shadow: none;
+    }
+    .maplibregl-ctrl-attrib {
+      background: rgba(12, 16, 46, 0.78) !important;
+      color: var(--muted);
+      font-size: 0.7rem;
+    }
+    .maplibregl-ctrl-attrib a { color: var(--yellow); }
+    .maplibregl-popup-content {
+      font-family: var(--font-body);
+      font-size: 0.88rem;
+      background: var(--navy);
+      color: var(--cream);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+      box-shadow: 0 8px 20px rgba(8, 10, 28, 0.4);
+    }
+    .maplibregl-popup-anchor-bottom .maplibregl-popup-tip { border-top-color: var(--navy); }
+
     .pacman-marker, .fruit-marker {
       width: 34px;
       height: 34px;
@@ -161,6 +259,29 @@
     }
     .pacman-rot { transform-origin: 50% 50%; }
     .fruit-marker svg { width: 32px; height: 32px; margin: 1px; }
+
+    .origin-label-marker {
+      pointer-events: none;
+      z-index: 1;
+    }
+    .origin-flag {
+      display: inline-block;
+      max-width: 200px;
+      padding: 4px 8px;
+      background: rgba(12, 16, 46, 0.94);
+      color: var(--cream);
+      border: 1px solid rgba(255, 209, 0, 0.6);
+      font-family: var(--font-display);
+      font-size: 0.72rem;
+      font-weight: 650;
+      line-height: 1.25;
+      border-radius: 5px 5px 5px 2px;
+      box-shadow: 0 4px 12px rgba(8, 10, 28, 0.4);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
     .actions {
       display: flex;
       flex-wrap: wrap;
@@ -168,166 +289,249 @@
       margin-top: 8px;
     }
     .actions button, .btn-secondary, .btn-ghost {
-      min-height: 44px;
-      padding: 8px 12px;
-      font-size: 0.95rem;
-    }
-    .btn-secondary {
-      background: #1d3557;
-      color: #fff;
-      border: 0;
-      border-radius: 6px;
-      font: inherit;
+      min-height: 40px;
+      padding: 7px 11px;
+      font-size: 0.84rem;
       font-weight: 600;
-      cursor: pointer;
+      background: transparent;
+      color: var(--cream);
+      border: 1px solid rgba(255, 243, 194, 0.32);
+      border-radius: 8px;
+      box-shadow: none;
     }
-    .btn-ghost {
-      background: #fff;
-      color: var(--ink);
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      font: inherit;
-      font-weight: 600;
-      cursor: pointer;
+    .actions button:hover, .btn-secondary:hover, .btn-ghost:hover {
+      filter: none;
+      background: rgba(255, 243, 194, 0.1);
     }
+
     #walk-banner, #congrats-banner {
       display: none;
       margin-top: 10px;
       padding: 12px 14px;
-      border-radius: 8px;
+      border-radius: 10px;
       font-size: 0.98rem;
       line-height: 1.4;
+      color: var(--cream);
     }
     #walk-banner.show, #congrats-banner.show { display: block; }
     #walk-banner {
-      background: #fff6d8;
-      border: 1px solid #e6d089;
+      background: rgba(227, 27, 35, 0.18);
+      border: 1px solid rgba(227, 27, 35, 0.55);
+      box-shadow: inset 3px 0 0 var(--cherry);
     }
     #congrats-banner {
-      background: #e7f6ea;
-      border: 1px solid #b7dfc0;
+      background: rgba(255, 209, 0, 0.14);
+      border: 1px solid rgba(255, 209, 0, 0.5);
+      box-shadow: inset 3px 0 0 var(--yellow);
     }
+    #btn-foto {
+      background: var(--yellow);
+      color: var(--navy);
+      border: 0;
+      min-height: 44px;
+      font-weight: 800;
+      box-shadow: 0 2px 0 var(--yellow-deep);
+    }
+    #btn-foto:hover { filter: none; background: #ffe34a; }
+    body.walking #btn-reset {
+      border-color: rgba(255, 209, 0, 0.55);
+      color: var(--yellow);
+    }
+
     .user-dot {
       width: 18px;
       height: 18px;
-      background: #1a73e8;
+      background: #20d4e8;
       border: 3px solid #fff;
       border-radius: 50%;
-      box-shadow: 0 0 0 7px rgba(26,115,232,0.28);
+      box-shadow: 0 0 0 7px rgba(32, 212, 232, 0.28);
     }
+
     dialog.modal {
-      border: 0;
-      border-radius: 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
       padding: 0;
       width: calc(100% - 24px);
       max-width: 520px;
       max-height: 88vh;
       background: var(--card);
-      color: var(--ink);
-      box-shadow: 0 16px 50px rgba(0,0,0,0.25);
+      color: var(--cream);
+      box-shadow: 0 18px 50px rgba(8, 10, 28, 0.55), inset 0 3px 0 var(--yellow);
     }
-    dialog.modal::backdrop { background: rgba(0,0,0,0.45); }
+    dialog.modal::backdrop { background: rgba(8, 10, 28, 0.62); }
     .modal-body { padding: 16px 18px 18px; overflow: auto; max-height: 88vh; }
-    .modal-body h2 { margin: 0 0 12px; font-size: 1.15rem; }
+    .modal-body h2 {
+      margin: 0 0 12px;
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 750;
+      color: var(--cream);
+    }
+    .modal-body p { color: var(--cream); }
     .modal-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
     .tabs { display: flex; gap: 6px; margin-bottom: 12px; }
-    .tabs button[aria-selected="true"] { background: var(--accent); color: #fff; }
+    .tabs button[aria-selected="true"] {
+      background: var(--yellow);
+      color: var(--navy);
+      border-color: var(--yellow);
+    }
     .hist-item, .week-row {
       border: 1px solid var(--line);
       border-radius: 8px;
       padding: 10px 12px;
       margin: 0 0 8px;
-      background: #fff;
+      background: rgba(10, 13, 36, 0.55);
     }
     .hist-item { cursor: pointer; display: flex; gap: 10px; align-items: center; }
+    .hist-item:hover { background: rgba(255, 209, 0, 0.1); }
     .hist-item img { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; flex: none; }
     .hist-meta { font-size: 0.88rem; color: var(--muted); }
     .badge { display: inline-block; font-size: 0.75rem; font-weight: 700; padding: 2px 7px; border-radius: 999px; }
-    .badge.ok { background: #e7f6ea; color: #215c3a; }
-    .badge.no { background: #f3efe6; color: #5e574c; }
+    .badge.ok { background: var(--yellow); color: var(--navy); }
+    .badge.no { background: rgba(255, 243, 194, 0.12); color: var(--muted); }
     .bars { display: flex; align-items: flex-end; gap: 6px; height: 90px; margin: 8px 0 4px; }
     .bars .bar {
       flex: 1;
-      background: var(--accent);
-      border-radius: 4px 4px 0 0;
+      background: var(--yellow);
+      border-radius: 3px 3px 0 0;
       min-height: 2px;
     }
     .bars-labels { display: flex; gap: 6px; font-size: 0.72rem; color: var(--muted); }
     .bars-labels span { flex: 1; text-align: center; }
     .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
-    .stat-card { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
-    .stat-card strong { display: block; font-size: 1.25rem; }
+    .stat-card {
+      background: rgba(10, 13, 36, 0.55);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      box-shadow: none;
+    }
+    .stat-card strong {
+      display: block;
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 750;
+      color: var(--yellow);
+    }
     .hist-photo { max-width: 100%; border-radius: 8px; margin: 10px 0; }
     #foto-input { display: none; }
-    .ctrl-label { font-size: 0.75rem; color: var(--muted); margin-bottom: 4px; }
+    .ctrl-label { font-size: 0.78rem; color: var(--muted); margin-bottom: 4px; }
     .chip-row { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
     .chip {
-      background: rgba(255,255,255,0.9);
-      color: var(--ink);
-      border: 1px solid var(--line);
+      background: rgba(10, 13, 36, 0.5);
+      color: var(--cream);
+      border: 1px solid rgba(255, 243, 194, 0.28);
       border-radius: 999px;
-      padding: 6px 11px;
-      min-height: 38px;
-      font: inherit;
-      font-weight: 600;
+      padding: 6px 12px;
+      min-height: 40px;
+      font-family: var(--font-display);
+      font-size: 0.88rem;
+      font-weight: 650;
       cursor: pointer;
+      box-shadow: none;
     }
-    .chip:hover { filter: none; background: #fff8ea; }
+    .chip:hover { filter: none; background: rgba(255, 209, 0, 0.12); }
     .chip[aria-pressed="true"] {
-      background: var(--accent);
-      color: #fff;
-      border-color: var(--accent);
+      background: var(--yellow);
+      color: var(--navy);
+      border-color: var(--yellow);
     }
     #km-custom-wrap { display: none; align-items: center; gap: 6px; }
     #km-custom-wrap.show { display: flex; }
     #km-custom-wrap input { width: 5.6rem; }
-    #loc-box { display: none; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+    #loc-box {
+      display: none;
+      margin-top: 8px;
+      padding: 10px 10px 8px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(10, 13, 36, 0.45);
+    }
     #loc-box.show { display: block; }
     #loc-q {
       width: 100%;
       padding: 8px 10px;
       border: 1px solid var(--line);
-      border-radius: 6px;
+      border-radius: 8px;
       font: inherit;
-      background: #fff;
-      color: var(--ink);
+      background: rgba(10, 13, 36, 0.72);
+      color: var(--cream);
     }
     #loc-results { margin-top: 6px; max-height: 28vh; overflow: auto; }
     #loc-results button {
       display: block;
       width: 100%;
       text-align: left;
-      background: #fff;
-      color: var(--ink);
-      border: 1px solid var(--line);
+      background: rgba(10, 13, 36, 0.55);
+      color: var(--cream);
+      border: 1px solid rgba(255, 243, 194, 0.22);
       margin: 0 0 4px;
+      font-family: var(--font-body);
       font-weight: 500;
       font-size: 0.82rem;
       line-height: 1.3;
       padding: 8px 10px;
       min-height: 0;
     }
-    #loc-results button:hover { filter: none; background: #fff8ea; }
+    #loc-results button:hover { filter: none; background: rgba(255, 209, 0, 0.12); }
     .loc-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-    .loc-actions button { min-height: 40px; font-size: 0.85rem; padding: 7px 10px; }
+    .loc-actions button { min-height: 40px; font-size: 0.84rem; padding: 7px 10px; }
+
+    #reset-same {
+      background: var(--yellow);
+      color: var(--navy);
+      border: 0;
+      min-height: 44px;
+      font-weight: 750;
+      box-shadow: 0 2px 0 var(--yellow-deep);
+    }
+    #reset-same:hover { filter: none; background: #ffe34a; }
+
+    .btn-reset-all,
+    #btn-reset-all {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 4px 0;
+      min-height: 0;
+      background: none;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      color: #f0a0a0;
+      font-family: var(--font-body);
+      font-size: 0.78rem;
+      font-weight: 400;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      cursor: pointer;
+    }
+    .btn-reset-all:hover,
+    #btn-reset-all:hover {
+      filter: none;
+      background: none;
+      color: #ff8b8b;
+    }
+
     @media (max-width: 640px) {
-      h1 { font-size: 0.98rem; }
-      .lead { margin-bottom: 6px; font-size: 0.75rem; }
+      h1 { font-size: 1.05rem; }
+      .lead { margin-bottom: 8px; font-size: 0.76rem; }
       #ui-panel {
         width: calc(100vw - 20px - 54px);
-        max-height: min(48vh, calc(100dvh - 24px - env(safe-area-inset-bottom)));
-        padding: 10px 40px 11px 11px;
+        max-height: min(52vh, calc(100dvh - 24px - env(safe-area-inset-bottom)));
+        padding: 12px 40px 10px 12px;
         border-radius: 14px;
       }
+      #btn { min-height: 50px; font-size: 1.1rem; }
       .actions button, .btn-secondary, .btn-ghost {
-        min-height: 42px;
+        min-height: 40px;
         padding: 7px 10px;
-        font-size: 0.9rem;
+        font-size: 0.82rem;
       }
-      #status { font-size: 0.82rem; margin-top: 6px; }
-      .chip { min-height: 36px; padding: 5px 10px; }
+      #status { font-size: 0.82rem; margin-top: 8px; }
+      .chip { min-height: 40px; padding: 5px 11px; }
     }
-  </style>
+  
+</style>
 </head>
 <body>
   <button type="button" id="btn-panel" aria-controls="ui-panel" aria-expanded="false" aria-label="Mostrar menú" title="Mostrar menú"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
@@ -363,7 +567,7 @@
       <div id="loc-results"></div>
       <div class="loc-actions">
         <button type="button" id="loc-geo" class="btn-secondary">Usar mi ubicación actual</button>
-        <button type="button" id="loc-bb">Volver a Bahía Blanca</button>
+        <button type="button" id="loc-bb" class="btn-ghost">Volver a Bahía Blanca</button>
         <button type="button" id="loc-cancel" class="btn-ghost">Cerrar</button>
       </div>
     </div>
@@ -376,6 +580,7 @@
     </div>
     <div id="congrats-banner"></div>
     <input id="foto-input" type="file" accept="image/*" capture="environment">
+    <button type="button" id="btn-reset-all" class="btn-reset-all">Reiniciar todo</button>
   </section>
   <div id="map"></div>
 
@@ -468,7 +673,7 @@
       let originIsBB = true;
       const VALHALLA_URL = "https://valhalla1.openstreetmap.de/route";
       const OSRM_URL = "https://routing.openstreetmap.de/routed-foot/route/v1/foot";
-      const OFM_STYLE = "https://tiles.openfreemap.org/styles/liberty";
+      const OFM_STYLE = "https://tiles.openfreemap.org/styles/positron";
       const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>';
 
       // CARTO's public basemaps now require an API key, so the raster
@@ -492,7 +697,7 @@
         "https://tile.openstreetmap.de/{z}/{x}/{y}.png"
       ]);
 
-      let map, startMarker, fruitMarker, currentShape = null, currentRoute = null, fallbackUsed = false, mapStyleReady = false;
+      let map, startMarker, fruitMarker, originMarker, currentShape = null, currentRoute = null, fallbackUsed = false, mapStyleReady = false;
       const STORAGE_KEY = "camine-senora-camine.ruta";
       const LAP_SECONDS = 36;
       let autoStarted = false;
@@ -767,9 +972,6 @@
         const el = startMarker.getElement();
         const mouth = el.querySelector(".pacman-mouth");
         const rot = el.querySelector(".pacman-rot");
-        if (startMarker.getPopup() && startMarker.getPopup().isOpen()) {
-          startMarker.getPopup().remove();
-        }
         const t0 = performance.now();
         function frame(now) {
           animRaf = requestAnimationFrame(frame);
@@ -802,15 +1004,38 @@
           .addTo(map);
       }
 
+      function originLabelEl(label) {
+        const el = document.createElement("div");
+        el.className = "origin-label-marker";
+        const flag = document.createElement("span");
+        flag.className = "origin-flag";
+        flag.textContent = label || "";
+        el.appendChild(flag);
+        return el;
+      }
+
+      function placeOriginLabel(route) {
+        if (!map) return;
+        const src = route || currentRoute;
+        const pt = (src && src.origin) || START;
+        const label = (src && src.originName) || originName;
+        if (originMarker) {
+          originMarker.remove();
+          originMarker = null;
+        }
+        originMarker = new maplibregl.Marker({ element: originLabelEl(label), anchor: "bottom", offset: [0, -22] })
+          .setLngLat([pt[1], pt[0]])
+          .addTo(map);
+      }
+
       function placeMarker() {
         stopAnim();
         if (startMarker) startMarker.remove();
         const pt = (currentRoute && currentRoute.shape && currentRoute.shape[0]) || START;
-        const label = (currentRoute && currentRoute.originName) || originName;
         startMarker = new maplibregl.Marker({ element: pacmanEl(), anchor: "center" })
           .setLngLat([pt[1], pt[0]])
-          .setPopup(new maplibregl.Popup({ offset: 20 }).setText(label))
           .addTo(map);
+        placeOriginLabel();
         if (currentRoute) rotatePacman(currentRoute.pacmanDeg);
       }
 
@@ -1105,9 +1330,7 @@
         currentShape = route.shape;
         drawRoute(route);
         setStatus(routeStatusHtml(route));
-        if (openPopup && startMarker && startMarker.getPopup() && !startMarker.getPopup().isOpen()) {
-          startMarker.togglePopup();
-        }
+        placeOriginLabel(route);
       }
 
       function onMapReady() {
@@ -1176,14 +1399,14 @@
             type: "line",
             source: "route",
             layout: { "line-cap": "round", "line-join": "round" },
-            paint: { "line-color": "#1919a6", "line-width": 5, "line-opacity": 0.92 }
+            paint: { "line-color": "#2121b0", "line-width": 5, "line-opacity": 0.92 }
           });
           map.addLayer({
             id: "route-dots",
             type: "line",
             source: "route",
             layout: { "line-cap": "round", "line-join": "round" },
-            paint: { "line-color": "#ffe08a", "line-width": 7, "line-dasharray": [0, 2.3], "line-opacity": 1 }
+            paint: { "line-color": "#ffd54a", "line-width": 7, "line-dasharray": [0, 2.3], "line-opacity": 1 }
           });
         }
         rotatePacman(route.pacmanDeg);
@@ -1194,6 +1417,7 @@
         if (mapStyleReady) ensureWalkLayers();
         if (!viewingHistoryId) bindWalkToRoute(route);
         startAnim(route);
+        placeOriginLabel(route);
       }
 
       function fitPadding() {
@@ -1517,7 +1741,7 @@
             type: "line",
             source: "walk-gps",
             layout: { "line-cap": "round", "line-join": "round" },
-            paint: { "line-color": "#e85d04", "line-width": 3.5, "line-opacity": 0.85 }
+            paint: { "line-color": "#ff8a1d", "line-width": 3.5, "line-opacity": 0.85 }
           });
         }
       }
@@ -1675,6 +1899,7 @@
         if (simTimer) { clearInterval(simTimer); simTimer = null; }
         if (walk) walk.watching = false;
         releaseWake();
+        document.body.classList.remove("walking");
         btnWalk.textContent = (walk && walk.progressM > 0 && !walk.complete) ? "Seguir caminata" : "Empezar caminata";
         btnWalk.disabled = false;
       }
@@ -1709,6 +1934,7 @@
         walk.watching = true;
         walk.complete = false;
         congratsBanner.classList.remove("show");
+        document.body.classList.add("walking");
         btnWalk.textContent = "Caminando…";
         btnWalk.disabled = true;
         saveWalk();
@@ -1882,7 +2108,46 @@
         if (document.visibilityState === "visible" && walk && walk.watching && !walk.complete) requestWake();
       });
 
+      async function resetAllAppData() {
+        try {
+          const db = await openIdb();
+          db.close();
+        } catch (err) {}
+        await new Promise(function (resolve) {
+          let done = false;
+          function finish() {
+            if (done) return;
+            done = true;
+            resolve();
+          }
+          try {
+            const req = indexedDB.deleteDatabase(DB_NAME);
+            req.onsuccess = finish;
+            req.onerror = finish;
+            req.onblocked = finish;
+          } catch (err) { finish(); }
+          setTimeout(finish, 1600);
+        });
+        try {
+          const keys = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.indexOf("camine-senora-camine") === 0) keys.push(k);
+          }
+          keys.forEach(function (k) { localStorage.removeItem(k); });
+        } catch (err) {}
+        location.reload();
+      }
+
       btnWalk.addEventListener("click", function () { startWalk(); });
+      const btnResetAll = document.getElementById("btn-reset-all");
+      if (btnResetAll) {
+        btnResetAll.addEventListener("click", function () {
+          const ok = confirm("Esto borra la ruta guardada, el historial, las fotos, las preferencias y la memoria de sectores, y vuelve a Bahía Blanca. ¿Seguir?");
+          if (!ok) return;
+          resetAllAppData();
+        });
+      }
       btnReset.addEventListener("click", function () { modalReset.showModal(); });
       document.getElementById("reset-cancel").addEventListener("click", function () { modalReset.close(); });
       document.getElementById("reset-same").addEventListener("click", async function () {
@@ -2033,7 +2298,9 @@
           maps: w.maps || "#",
           formaId: w.formaId || null,
           formaLabel: w.formaLabel || null,
-          idealShape: w.idealShape || null
+          idealShape: w.idealShape || null,
+          origin: w.origin || (w.shape && w.shape[0]) || START,
+          originName: w.originName || "Inicio"
         };
         drawRoute(route);
         if (w.gpsTrack && w.gpsTrack.length && map.getSource("walk-gps")) {
@@ -2432,7 +2699,23 @@
           originIsBB: originIsBB,
           start: [START[0], START[1]],
           locBox: document.getElementById("loc-box").classList.contains("show"),
-          locBtn: !!(document.getElementById("btn-loc"))
+          locBtn: !!(document.getElementById("btn-loc")),
+          originFlag: (function () {
+            const el = document.querySelector(".origin-flag");
+            if (!el) return null;
+            const r = el.getBoundingClientRect();
+            const m = originMarker && originMarker.getLngLat && originMarker.getLngLat();
+            const p = startMarker && startMarker.getLngLat && startMarker.getLngLat();
+            return {
+              text: el.textContent,
+              x: Math.round(r.left),
+              y: Math.round(r.top),
+              lng: m && m.lng,
+              lat: m && m.lat,
+              pacLng: p && p.lng,
+              pacLat: p && p.lat
+            };
+          })()
         };
       };
     }
